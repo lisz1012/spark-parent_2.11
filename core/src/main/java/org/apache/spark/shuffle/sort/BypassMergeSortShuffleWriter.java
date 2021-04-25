@@ -198,7 +198,7 @@ final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> {
           final FileInputStream in = new FileInputStream(file);
           boolean copyThrewException = true;
           try {
-            lengths[i] = Utils.copyStream(in, out, false, transferToEnabled);
+            lengths[i] = Utils.copyStream(in, out, false, transferToEnabled); // 待会儿拿这个lengths为依据，创建索引文件
             copyThrewException = false;
           } finally {
             Closeables.close(in, copyThrewException);
