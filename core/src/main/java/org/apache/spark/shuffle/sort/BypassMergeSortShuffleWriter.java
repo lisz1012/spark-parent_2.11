@@ -192,6 +192,7 @@ final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> {
     final long writeStartTime = System.nanoTime();
     boolean threwException = true;
     try {
+      // 好多inputStreams读进来，然后对准着同一个outputStream 全力输出 ---> 合并文件
       for (int i = 0; i < numPartitions; i++) {
         final File file = partitionWriterSegments[i].file();
         if (file.exists()) {
