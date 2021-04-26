@@ -336,7 +336,7 @@ final class ShuffleExternalSorter extends MemoryConsumer {
         array = allocateArray(used / 8 * 2);
       } catch (TooLargePageException e) {
         // The pointer array is too big to fix in a single page, spill.
-        spill();
+        spill(); // 内存开辟不动了，也会溢写
         return;
       } catch (SparkOutOfMemoryError e) {
         // should have trigger spilling
