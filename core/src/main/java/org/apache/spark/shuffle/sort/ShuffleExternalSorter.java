@@ -395,12 +395,12 @@ final class ShuffleExternalSorter extends MemoryConsumer {
 
     assert(currentPage != null);
     final Object base = currentPage.getBaseObject();
-    final long recordAddress = taskMemoryManager.encodePageNumberAndOffset(currentPage, pageCursor);
+    final long recordAddress = taskMemoryManager.encodePageNumberAndOffset(currentPage, pageCursor); //第二个参数是偏移量
     Platform.putInt(base, pageCursor, length);
     pageCursor += 4;
-    Platform.copyMemory(recordBase, recordOffset, base, pageCursor, length);
+    Platform.copyMemory(recordBase, recordOffset, base, pageCursor, length); // 进来的数据存入页，页可能在堆内，也可能在堆外
     pageCursor += length;
-    inMemSorter.insertRecord(recordAddress, partitionId);
+    inMemSorter.insertRecord(recordAddress, partitionId); // 排序排的是索引
   }
 
   /**
