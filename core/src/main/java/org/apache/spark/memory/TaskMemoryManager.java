@@ -123,7 +123,7 @@ public class TaskMemoryManager {
    * Construct a new TaskMemoryManager.
    */
   public TaskMemoryManager(MemoryManager memoryManager, long taskAttemptId) {
-    this.tungstenMemoryMode = memoryManager.tungstenMemoryMode();
+    this.tungstenMemoryMode = memoryManager.tungstenMemoryMode(); // 钨丝计划，用unsafe的方式给spark提速
     this.memoryManager = memoryManager;
     this.taskAttemptId = taskAttemptId;
     this.consumers = new HashSet<>();
