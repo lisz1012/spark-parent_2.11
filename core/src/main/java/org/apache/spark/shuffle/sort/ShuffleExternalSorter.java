@@ -396,9 +396,9 @@ final class ShuffleExternalSorter extends MemoryConsumer {
     assert(currentPage != null);
     final Object base = currentPage.getBaseObject();
     final long recordAddress = taskMemoryManager.encodePageNumberAndOffset(currentPage, pageCursor); //第二个参数是偏移量
-    Platform.putInt(base, pageCursor, length);
+    Platform.putInt(base, pageCursor, length); // Unsafe相同的方法会根据base是否为null，处理方法不一样，null的时候，直接向物理地址填充4个字节。堆内：先new array对象，但不通过array[1] = 2就能用Unsafe调用底层的C代码偷偷改array中的值；堆外：要先allocateMem
     pageCursor += 4;
-    Platform.copyMemory(recordBase, recordOffset, base, pageCursor, length); // 进来的数据存入页，页可能在堆内，也可能在堆外
+    Platform.copyMemory(recordBase, recordOffset, base, pageCursor, length); // 进来的数据存入页，页可能在堆内，也可能在堆外，base为null就往堆外拷贝
     pageCursor += length;
     inMemSorter.insertRecord(recordAddress, partitionId); // 排序排的是索引
   }

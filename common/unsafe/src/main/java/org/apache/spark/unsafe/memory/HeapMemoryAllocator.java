@@ -66,8 +66,8 @@ public class HeapMemoryAllocator implements MemoryAllocator {
         }
       }
     }
-    long[] array = new long[(int) ((size + 7) / 8)];
-    MemoryBlock memory = new MemoryBlock(array, Platform.LONG_ARRAY_OFFSET, size);
+    long[] array = new long[(int) ((size + 7) / 8)]; // capacity is at least 1
+    MemoryBlock memory = new MemoryBlock(array, Platform.LONG_ARRAY_OFFSET, size); // LONG_ARRAY_OFFSET = 16
     if (MemoryAllocator.MEMORY_DEBUG_FILL_ENABLED) {
       memory.fill(MemoryAllocator.MEMORY_DEBUG_FILL_CLEAN_VALUE);
     }

@@ -287,7 +287,7 @@ public class TaskMemoryManager {
 
     final int pageNumber;
     synchronized (this) {
-      pageNumber = allocatedPages.nextClearBit(0);
+      pageNumber = allocatedPages.nextClearBit(0); // 用BitSet的位来记录申请到第几页了
       if (pageNumber >= PAGE_TABLE_SIZE) {
         releaseExecutionMemory(acquired, consumer);
         throw new IllegalStateException(

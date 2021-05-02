@@ -80,7 +80,7 @@ final class PackedRecordPointer {
     // Also note that this relies on some internals of how TaskMemoryManager encodes its addresses.
     final long pageNumber = (recordPointer & MASK_LONG_UPPER_13_BITS) >>> 24;
     final long compressedAddress = pageNumber | (recordPointer & MASK_LONG_LOWER_27_BITS);
-    return (((long) partitionId) << 40) | compressedAddress;
+    return (((long) partitionId) << 40) | compressedAddress; // 这就是为什么下游分区数不超过16777215的时候才能走堆外内存，这个partitionId也在索引里，这就可以根据partition排序了。这个返回值里有partitionId、pageNumber、offsetInPage
   }
 
   private long packedRecordPointer;

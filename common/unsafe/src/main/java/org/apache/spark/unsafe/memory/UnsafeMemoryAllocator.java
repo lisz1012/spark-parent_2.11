@@ -26,8 +26,8 @@ public class UnsafeMemoryAllocator implements MemoryAllocator {
 
   @Override
   public MemoryBlock allocate(long size) throws OutOfMemoryError {
-    long address = Platform.allocateMemory(size);
-    MemoryBlock memory = new MemoryBlock(null, address, size);
+    long address = Platform.allocateMemory(size); // 堆外分配的空间的基地址, OS可以访问的进程的地址,堆外无对象头的字节数组
+    MemoryBlock memory = new MemoryBlock(null, address, size); // 第一个参数是否为null是Unsafe的开关，决定on/off heap
     if (MemoryAllocator.MEMORY_DEBUG_FILL_ENABLED) {
       memory.fill(MemoryAllocator.MEMORY_DEBUG_FILL_CLEAN_VALUE);
     }
