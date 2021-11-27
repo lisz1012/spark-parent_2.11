@@ -401,7 +401,7 @@ private[deploy] class Worker(
         changeMaster(masterRef, masterWebUiUrl, masterAddress)
         forwordMessageScheduler.scheduleAtFixedRate(new Runnable {
           override def run(): Unit = Utils.tryLogNonFatalError {
-            self.send(SendHeartbeat)
+            self.send(SendHeartbeat) // DeployMessage中的一种样例，scala简洁。只有收到注册成功确认才会发送心跳
           }
         }, 0, HEARTBEAT_MILLIS, TimeUnit.MILLISECONDS)
         if (CLEANUP_ENABLED) {
@@ -431,7 +431,7 @@ private[deploy] class Worker(
   }
 
   override def receive: PartialFunction[Any, Unit] = synchronized {
-    case msg: RegisterWorkerResponse =>
+    case msg: RegisterWorkerResponse => // RegisteredWorker的父类
       handleRegisterResponse(msg)
 
     case SendHeartbeat =>
