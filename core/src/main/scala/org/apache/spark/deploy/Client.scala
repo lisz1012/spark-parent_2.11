@@ -92,7 +92,7 @@ private class ClientEndpoint(
           Seq("{{WORKER_URL}}", "{{USER_JAR}}", driverArgs.mainClass) ++ driverArgs.driverOptions,
           sys.env, classPathEntries, libraryPathEntries, javaOpts)
 
-        val driverDescription = new DriverDescription(
+        val driverDescription = new DriverDescription( // new是灰色的，样例类，可以序列化
           driverArgs.jarUrl,
           driverArgs.memory,
           driverArgs.cores,

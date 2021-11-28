@@ -57,7 +57,7 @@ private[spark] class CoarseGrainedExecutorBackend(
 
   override def onStart() {
     logInfo("Connecting to driver: " + driverUrl)
-    rpcEnv.asyncSetupEndpointRefByURI(driverUrl).flatMap { ref =>
+    rpcEnv.asyncSetupEndpointRefByURI(driverUrl).flatMap { ref => // CoarseGrainedExecutorBackend 是资源层的Executor，他正在向Driver反向注册，并不是Driver主动联系的Executor
       // This is a very fast action so we can use "ThreadUtils.sameThread"
       driver = Some(ref)
       ref.ask[Boolean](RegisterExecutor(executorId, self, hostname, cores, extractLogUrls))
@@ -80,7 +80,7 @@ private[spark] class CoarseGrainedExecutorBackend(
     case RegisteredExecutor =>
       logInfo("Successfully registered with driver")
       try {
-        executor = new Executor(executorId, hostname, env, userClassPath, isLocal = false)
+        executor = new Executor(executorId, hostname, env, userClassPath, isLocal = false) // 这个Executor管理线程池，具体执行任务
       } catch {
         case NonFatal(e) =>
           exitExecutor(1, "Unable to create executor due to " + e.getMessage, e)
@@ -225,7 +225,7 @@ private[spark] object CoarseGrainedExecutorBackend extends Logging {
         SparkHadoopUtil.get.addDelegationTokens(tokens, driverConf)
       }
 
-      val env = SparkEnv.createExecutorEnv(
+      val env = SparkEnv.createExecutorEnv( // 传说中的SparkEnv，首次出现，Driver和Executor里面都有，基石
         driverConf, executorId, hostname, cores, cfg.ioEncryptionKey, isLocal = false)
 
       env.rpcEnv.setupEndpoint("Executor", new CoarseGrainedExecutorBackend(

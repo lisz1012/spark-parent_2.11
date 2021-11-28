@@ -599,9 +599,9 @@ private[deploy] class Master(
       app: ApplicationInfo,
       usableWorkers: Array[WorkerInfo],
       spreadOutApps: Boolean): Array[Int] = {
-    val coresPerExecutor = app.desc.coresPerExecutor
-    val minCoresPerExecutor = coresPerExecutor.getOrElse(1)
-    val oneExecutorPerWorker = coresPerExecutor.isEmpty
+    val coresPerExecutor = app.desc.coresPerExecutor             // 来自于用户的参数，用户没有给出就为空
+    val minCoresPerExecutor = coresPerExecutor.getOrElse(1)      // 最少1个核心
+    val oneExecutorPerWorker = coresPerExecutor.isEmpty          // 如果用户不干预上面的参数，那就每个Worker上跑一个Executor，并占用所有可用的核心
     val memoryPerExecutor = app.desc.memoryPerExecutorMB
     val numUsable = usableWorkers.length
     val assignedCores = new Array[Int](numUsable) // Number of cores to give to each worker
@@ -650,7 +650,7 @@ private[deploy] class Master(
           // many workers as possible. If we are not spreading out, then we should keep
           // scheduling executors on this worker until we use all of its resources.
           // Otherwise, just move on to the next worker.
-          if (spreadOutApps) {
+          if (spreadOutApps) { // spreadOutApps 默认是true，Executor分散到各个数据节点，避免数据的移动
             keepScheduling = false
           }
         }
@@ -666,7 +666,7 @@ private[deploy] class Master(
   private def startExecutorsOnWorkers(): Unit = {
     // Right now this is a very simple FIFO scheduler. We keep trying to fit in the first app
     // in the queue, then the second app, etc.
-    for (app <- waitingApps) {
+    for (app <- waitingApps) { // 可能有多个人并行提交app
       val coresPerExecutor = app.desc.coresPerExecutor.getOrElse(1)
       // If the cores left is less than the coresPerExecutor,the cores left will not be allocated
       if (app.coresLeft >= coresPerExecutor) {
@@ -674,11 +674,11 @@ private[deploy] class Master(
         val usableWorkers = workers.toArray.filter(_.state == WorkerState.ALIVE)
           .filter(worker => worker.memoryFree >= app.desc.memoryPerExecutorMB &&
             worker.coresFree >= coresPerExecutor)
-          .sortBy(_.coresFree).reverse
+          .sortBy(_.coresFree).reverse // 空闲核心数多的Worker往前排，优先分配任务
         val assignedCores = scheduleExecutorsOnWorkers(app, usableWorkers, spreadOutApps)
 
         // Now that we've decided how many cores to allocate on each worker, let's allocate them
-        for (pos <- 0 until usableWorkers.length if assignedCores(pos) > 0) {
+        for (pos <- 0 until usableWorkers.length if assignedCores(pos) > 0) { // 一个Worker一个Worker地向外分配启动Executor
           allocateWorkerResourceToExecutors(
             app, assignedCores(pos), app.desc.coresPerExecutor, usableWorkers(pos))
         }
@@ -701,9 +701,9 @@ private[deploy] class Master(
     // If the number of cores per executor is specified, we divide the cores assigned
     // to this worker evenly among the executors with no remainder.
     // Otherwise, we launch a single executor that grabs all the assignedCores on this worker.
-    val numExecutors = coresPerExecutor.map { assignedCores / _ }.getOrElse(1)
+    val numExecutors = coresPerExecutor.map { assignedCores / _ }.getOrElse(1) // _是coresPerExecutor，算需要多少Executor
     val coresToAssign = coresPerExecutor.getOrElse(assignedCores)
-    for (i <- 1 to numExecutors) {
+    for (i <- 1 to numExecutors) { // Executor是一个个的地被启动
       val exec = app.addExecutor(worker, coresToAssign)
       launchExecutor(worker, exec)
       app.state = ApplicationState.RUNNING
@@ -712,7 +712,7 @@ private[deploy] class Master(
 
   /**
    * Schedule the currently available resources among waiting apps. This method will be called
-   * every time a new app joins or resource availability changes.
+   * every time a new app joins or resource availability changes. 资源注册
    */
   private def schedule(): Unit = {
     if (state != RecoveryState.ALIVE) {
@@ -725,7 +725,7 @@ private[deploy] class Master(
     for (driver <- waitingDrivers.toList) { // iterate over a copy of waitingDrivers
       // We assign workers to each waiting driver in a round-robin fashion. For each driver, we
       // start from the last worker that was assigned a driver, and continue onwards until we have
-      // explored all alive workers.
+      // explored all alive workers. 如果Driver已经注册过了，这时waitingDriver就是空的，跳过这个循环
       var launched = false
       var numWorkersVisited = 0
       while (numWorkersVisited < numWorkersAlive && !launched) {
@@ -739,7 +739,7 @@ private[deploy] class Master(
         curPos = (curPos + 1) % numWorkersAlive
       }
     }
-    startExecutorsOnWorkers()
+    startExecutorsOnWorkers() // 计算开始之前就申请资源，尽早占用
   }
 
   private def launchExecutor(worker: WorkerInfo, exec: ExecutorDesc): Unit = {

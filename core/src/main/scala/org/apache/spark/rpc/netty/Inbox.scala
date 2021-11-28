@@ -78,7 +78,7 @@ private[netty] class Inbox(
 
   // OnStart should be the first message to process
   inbox.synchronized {
-    messages.add(OnStart)
+    messages.add(OnStart) // 这里的OnStart标识了要调用endpoint.onStart()的条件
   }
 
   /**
