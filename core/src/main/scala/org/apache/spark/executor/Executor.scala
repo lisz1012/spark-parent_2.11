@@ -86,7 +86,7 @@ private[spark] class Executor(
   }
 
   // Start worker thread pool
-  private val threadPool = {
+  private val threadPool = { // 真正干活的是Executor上的线程池
     val threadFactory = new ThreadFactoryBuilder()
       .setDaemon(true)
       .setNameFormat("Executor task launch worker-%d")
@@ -98,7 +98,7 @@ private[spark] class Executor(
           new UninterruptibleThread(r, "unused") // thread name will be set by ThreadFactoryBuilder
       })
       .build()
-    Executors.newCachedThreadPool(threadFactory).asInstanceOf[ThreadPoolExecutor]
+    Executors.newCachedThreadPool(threadFactory).asInstanceOf[ThreadPoolExecutor] //用newCachedThreadPool不怕堆外内存溢出？
   }
   private val executorSource = new ExecutorSource(threadPool, executorId)
   // Pool used for threads that supervise task killing / cancellation
