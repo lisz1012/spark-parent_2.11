@@ -86,7 +86,7 @@ private[spark] class Executor(
   }
 
   // Start worker thread pool
-  private val threadPool = { // 真正干活的是Executor上的线程池，疑问：newCachedThreadPool真的是个好选择吗？为什么不根据分配的核心数创建固定大小的线程池，防止内存溢出？
+  private val threadPool = { // 真正干活的是Executor上的线程池，疑问：newCachedThreadPool真的是个好选择吗？为什么不根据分配的核心数创建固定大小的线程池，防止内存溢出？应该是Master算准了不至于吧
     val threadFactory = new ThreadFactoryBuilder()
       .setDaemon(true)
       .setNameFormat("Executor task launch worker-%d")
