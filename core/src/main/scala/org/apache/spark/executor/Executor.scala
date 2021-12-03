@@ -98,7 +98,7 @@ private[spark] class Executor(
           new UninterruptibleThread(r, "unused") // thread name will be set by ThreadFactoryBuilder
       })
       .build()
-    Executors.newCachedThreadPool(threadFactory).asInstanceOf[ThreadPoolExecutor] //用newCachedThreadPool不怕堆外内存溢出？
+    Executors.newCachedThreadPool(threadFactory).asInstanceOf[ThreadPoolExecutor] //用newCachedThreadPool不怕堆外内存溢出？自定义线程池好一些？
   }
   private val executorSource = new ExecutorSource(threadPool, executorId)
   // Pool used for threads that supervise task killing / cancellation
