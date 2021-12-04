@@ -452,11 +452,11 @@ class DAGScheduler(
   }
 
   private def getMissingParentStages(stage: Stage): List[Stage] = {
-    val missing = new HashSet[Stage]
+    val missing = new HashSet[Stage] // 两个 stage 顺序无所谓
     val visited = new HashSet[RDD[_]]
     // We are manually maintaining a stack here to prevent StackOverflowError
     // caused by recursively visiting
-    val waitingForVisit = new ArrayStack[RDD[_]]
+    val waitingForVisit = new ArrayStack[RDD[_]] // 用栈模拟递归，也达到了倒序的目的。总体来讲是递归和栈相结合的方式倒序遍历
     def visit(rdd: RDD[_]) {
       if (!visited(rdd)) {
         visited += rdd
@@ -465,7 +465,7 @@ class DAGScheduler(
           for (dep <- rdd.dependencies) {
             dep match {
               case shufDep: ShuffleDependency[_, _, _] =>
-                val mapStage = getOrCreateShuffleMapStage(shufDep, stage.firstJobId)
+                val mapStage = getOrCreateShuffleMapStage(shufDep, stage.firstJobId) // 这里返回Stage了！Shuffle依赖会划分出Stage
                 if (!mapStage.isAvailable) {
                   missing += mapStage
                 }
@@ -940,7 +940,7 @@ class DAGScheduler(
     if (jobId.isDefined) {
       logDebug("submitStage(" + stage + ")")
       if (!waitingStages(stage) && !runningStages(stage) && !failedStages(stage)) {
-        val missing = getMissingParentStages(stage).sortBy(_.id)
+        val missing = getMissingParentStages(stage).sortBy(_.id) //从当前的stage往前倒，寻找缺少的前置的父阶段
         logDebug("missing: " + missing)
         if (missing.isEmpty) {
           logInfo("Submitting " + stage + " (" + stage.rdd + "), which has no missing parents")
