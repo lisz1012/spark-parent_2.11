@@ -329,11 +329,11 @@ class HadoopRDD[K, V](
     new HadoopMapPartitionsWithSplitRDD(this, f, preservesPartitioning)
   }
 
-  override def getPreferredLocations(split: Partition): Seq[String] = {
+  override def getPreferredLocations(split: Partition): Seq[String] = { // 可以取到分区数据源是哪一台主机
     val hsplit = split.asInstanceOf[HadoopPartition].inputSplit.value
     val locs = hsplit match {
-      case lsplit: InputSplitWithLocationInfo =>
-        HadoopRDD.convertSplitLocationInfo(lsplit.getLocationInfo)
+      case lsplit: InputSplitWithLocationInfo => //split包含了起始位置、大小、locations
+        HadoopRDD.convertSplitLocationInfo(lsplit.getLocationInfo) // 去Hadoop FS中去取最佳位置
       case _ => None
     }
     locs.getOrElse(hsplit.getLocations.filter(_ != "localhost"))

@@ -147,7 +147,7 @@ private[spark] class TaskSchedulerImpl(
     schedulableBuilder = {
       schedulingMode match {
         case SchedulingMode.FIFO =>
-          new FIFOSchedulableBuilder(rootPool)
+          new FIFOSchedulableBuilder(rootPool) // rootPool理解成一个跟节点，未来所有任务都向其挂载
         case SchedulingMode.FAIR =>
           new FairSchedulableBuilder(rootPool, conf)
         case _ =>
@@ -199,7 +199,7 @@ private[spark] class TaskSchedulerImpl(
         ts.isZombie = true
       }
       stageTaskSets(taskSet.stageAttemptId) = manager
-      schedulableBuilder.addTaskSetManager(manager, manager.taskSet.properties)
+      schedulableBuilder.addTaskSetManager(manager, manager.taskSet.properties) // 挂载到rootPool
 
       if (!isLocal && !hasReceivedTask) {
         starvationTimer.scheduleAtFixedRate(new TimerTask() {
@@ -216,7 +216,7 @@ private[spark] class TaskSchedulerImpl(
       }
       hasReceivedTask = true
     }
-    backend.reviveOffers()
+    backend.reviveOffers() // 发送Task，实现是 CoarseGrainedSchedulerBackend
   }
 
   // Label as private[scheduler] to allow tests to swap in different task set managers if necessary

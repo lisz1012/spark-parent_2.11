@@ -55,7 +55,7 @@ import org.apache.spark.util.CallSite
  */
 private[scheduler] abstract class Stage(
     val id: Int,
-    val rdd: RDD[_],
+    val rdd: RDD[_], // Stage中最后一个RDD
     val numTasks: Int,
     val parents: List[Stage],
     val firstJobId: Int,

@@ -456,7 +456,7 @@ class DAGScheduler(
     val visited = new HashSet[RDD[_]]
     // We are manually maintaining a stack here to prevent StackOverflowError
     // caused by recursively visiting
-    val waitingForVisit = new ArrayStack[RDD[_]] // 用栈模拟递归，也达到了倒序的目的。总体来讲是递归和栈相结合的方式倒序遍历
+    val waitingForVisit = new ArrayStack[RDD[_]] // 用栈模拟递归，也达到了倒序的目的。总体来讲是递归和栈相结合的方式倒序遍历。用栈做DFS，代码长得像BFS
     def visit(rdd: RDD[_]) {
       if (!visited(rdd)) {
         visited += rdd
@@ -934,7 +934,7 @@ class DAGScheduler(
     }
   }
 
-  /** Submits stage, but first recursively submits any missing parents. */
+  /** Submits stage, but first recursively submits any missing parents. 递归遍历一棵树，一旦遇到shuffle（图结构，就变成下一个Stage）*/
   private def submitStage(stage: Stage) {
     val jobId = activeJobForStage(stage)
     if (jobId.isDefined) {
@@ -942,7 +942,7 @@ class DAGScheduler(
       if (!waitingStages(stage) && !runningStages(stage) && !failedStages(stage)) {
         val missing = getMissingParentStages(stage).sortBy(_.id) //从当前的stage往前倒，寻找缺少的前置的父阶段
         logDebug("missing: " + missing)
-        if (missing.isEmpty) {
+        if (missing.isEmpty) { // 前面再也没有missing Stage了
           logInfo("Submitting " + stage + " (" + stage.rdd + "), which has no missing parents")
           submitMissingTasks(stage, jobId.get)
         } else {
@@ -980,7 +980,7 @@ class DAGScheduler(
         outputCommitCoordinator.stageStart(
           stage = s.id, maxPartitionId = s.rdd.partitions.length - 1)
     }
-    val taskIdToLocations: Map[Int, Seq[TaskLocation]] = try {
+    val taskIdToLocations: Map[Int, Seq[TaskLocation]] = try { // 任务是作用在每一个分区上的
       stage match {
         case s: ShuffleMapStage =>
           partitionsToCompute.map { id => (id, getPreferredLocs(stage.rdd, id))}.toMap
@@ -1028,7 +1028,7 @@ class DAGScheduler(
         taskBinaryBytes = stage match {
           case stage: ShuffleMapStage =>
             JavaUtils.bufferToArray(
-              closureSerializer.serialize((stage.rdd, stage.shuffleDep): AnyRef))
+              closureSerializer.serialize((stage.rdd, stage.shuffleDep): AnyRef)) // Driver端的逻辑要序列化，传送给Executor。序列化最后一个RDD，其中有一个属性指向前一个RDD，所以序列化最后一个RDD会把前面的一起序列化。所以Stage只需要保存最后一个RDD
           case stage: ResultStage =>
             JavaUtils.bufferToArray(closureSerializer.serialize((stage.rdd, stage.func): AnyRef))
         }
@@ -1036,7 +1036,7 @@ class DAGScheduler(
         partitions = stage.rdd.partitions
       }
 
-      taskBinary = sc.broadcast(taskBinaryBytes)
+      taskBinary = sc.broadcast(taskBinaryBytes) // 一旦Driver的sparkContext调用了broadcast存储层，其他的Executor也可以取到这些逻辑代码。MapReduce中是通过反射的方式得到Mapper和Reducer的对象，但是spark中是通过序列化反序列化拿到业务逻辑的
     } catch {
       // In the case of a failure during serialization, abort the stage.
       case e: NotSerializableException =>
@@ -1059,8 +1059,8 @@ class DAGScheduler(
         case stage: ShuffleMapStage =>
           stage.pendingPartitions.clear()
           partitionsToCompute.map { id =>
-            val locs = taskIdToLocations(id)
-            val part = partitions(id)
+            val locs = taskIdToLocations(id) // 取出计算的最佳位置
+            val part = partitions(id)        // 取出分区
             stage.pendingPartitions += id
             new ShuffleMapTask(stage.id, stage.latestInfo.attemptNumber,
               taskBinary, part, locs, properties, serializedTaskMetrics, Option(jobId),
@@ -1069,8 +1069,8 @@ class DAGScheduler(
 
         case stage: ResultStage =>
           partitionsToCompute.map { id =>
-            val p: Int = stage.partitions(id)
-            val part = partitions(p)
+            val p: Int = stage.partitions(id) // 取出计算的最佳位置
+            val part = partitions(p)          // 取出分区
             val locs = taskIdToLocations(id)
             new ResultTask(stage.id, stage.latestInfo.attemptNumber,
               taskBinary, part, locs, id, properties, serializedTaskMetrics,
@@ -1087,7 +1087,7 @@ class DAGScheduler(
     if (tasks.size > 0) {
       logInfo(s"Submitting ${tasks.size} missing tasks from $stage (${stage.rdd}) (first 15 " +
         s"tasks are for partitions ${tasks.take(15).map(_.partitionId)})")
-      taskScheduler.submitTasks(new TaskSet(
+      taskScheduler.submitTasks(new TaskSet( // DAGScheduler划分了逻辑和步骤，然后给了TaskSchedulerImpl，进行任务调度。这里就开始调用backend -> sparkEnv发送
         tasks.toArray, stage.id, stage.latestInfo.attemptNumber, jobId, properties))
     } else {
       // Because we posted SparkListenerStageSubmitted earlier, we should mark
@@ -1758,7 +1758,7 @@ class DAGScheduler(
    * methods (getCacheLocs()); please be careful when modifying this method, because any new
    * DAGScheduler state accessed by it may require additional synchronization.
    */
-  private def getPreferredLocsInternal(
+  private def getPreferredLocsInternal( // 递归。Stage是由一系列的窄依赖像链表一样拼接起来的，回溯到最开始的那个RDD，找他所计算的数据所在位置，把计算移动到那里
       rdd: RDD[_],
       partition: Int,
       visited: HashSet[(RDD[_], Int)]): Seq[TaskLocation] = {
@@ -1774,7 +1774,7 @@ class DAGScheduler(
       return cached
     }
     // If the RDD has some placement preferences (as is the case for input RDDs), get those
-    val rddPrefs = rdd.preferredLocations(rdd.partitions(partition)).toList
+    val rddPrefs = rdd.preferredLocations(rdd.partitions(partition)).toList // 一个RDD可能来自多个分区
     if (rddPrefs.nonEmpty) {
       return rddPrefs.map(TaskLocation(_))
     }

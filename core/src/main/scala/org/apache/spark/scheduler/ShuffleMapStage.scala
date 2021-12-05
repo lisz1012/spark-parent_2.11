@@ -91,6 +91,6 @@ private[spark] class ShuffleMapStage(
   override def findMissingPartitions(): Seq[Int] = {
     mapOutputTrackerMaster
       .findMissingPartitions(shuffleDep.shuffleId)
-      .getOrElse(0 until numPartitions)
+      .getOrElse(0 until numPartitions) // 默认是最后有多少个分区，这个stage就有多少个并行度
   }
 }

@@ -272,7 +272,7 @@ abstract class RDD[T: ClassTag](
    */
   final def preferredLocations(split: Partition): Seq[String] = {
     checkpointRDD.map(_.getPreferredLocations(split)).getOrElse {
-      getPreferredLocations(split)
+      getPreferredLocations(split) // 像MapPartitionsRDD这种中间转换的RDD是没有什么最佳位置科研的，必须得是贴源的HadoopRDD或者ShuffledRDD才有
     }
   }
 
