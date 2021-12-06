@@ -196,7 +196,7 @@ private[spark] class ExternalSorter[K, V, C](
       }
     } else {
       // Stick values into our buffer
-      while (records.hasNext) {
+      while (records.hasNext) { // 迭代计算的数据来自HadoopRDD的recordReader或者shuffledRDD的reader，要么是文件，要么是shuffle的结果
         addElementsRead()
         val kv = records.next()
         buffer.insert(getPartition(kv._1), kv._1, kv._2.asInstanceOf[C]) // K, V, P

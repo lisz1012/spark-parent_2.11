@@ -284,7 +284,7 @@ object SparkEnv extends Logging {
       "spark.serializer", "org.apache.spark.serializer.JavaSerializer")
     logDebug(s"Using serializer: ${serializer.getClass}")
 
-    val serializerManager = new SerializerManager(serializer, conf, ioEncryptionKey)
+    val serializerManager = new SerializerManager(serializer, conf, ioEncryptionKey) // 数据如何序列化，默认实现：JavaSerializer
 
     val closureSerializer = new JavaSerializer(conf)
 
@@ -299,7 +299,7 @@ object SparkEnv extends Logging {
       }
     }
 
-    val broadcastManager = new BroadcastManager(isDriver, conf, securityManager)
+    val broadcastManager = new BroadcastManager(isDriver, conf, securityManager) // 广播数据出去走的也是blockManager，所以后者也会用到它
 
     val mapOutputTracker = if (isDriver) {
       new MapOutputTrackerMaster(conf, broadcastManager, isLocal)
@@ -315,12 +315,12 @@ object SparkEnv extends Logging {
 
     // Let the user specify short names for shuffle managers
     val shortShuffleMgrNames = Map(
-      "sort" -> classOf[org.apache.spark.shuffle.sort.SortShuffleManager].getName,
+      "sort" -> classOf[org.apache.spark.shuffle.sort.SortShuffleManager].getName, // sort可以形成线性读取
       "tungsten-sort" -> classOf[org.apache.spark.shuffle.sort.SortShuffleManager].getName)
     val shuffleMgrName = conf.get("spark.shuffle.manager", "sort")
     val shuffleMgrClass =
       shortShuffleMgrNames.getOrElse(shuffleMgrName.toLowerCase(Locale.ROOT), shuffleMgrName)
-    val shuffleManager = instantiateClass[ShuffleManager](shuffleMgrClass)
+    val shuffleManager = instantiateClass[ShuffleManager](shuffleMgrClass) // 只有一个子类：SortShuffleManager，定义了数据往blockManager存的时候怎么去存？ShuffleRead/Write
 
     val useLegacyMemoryManager = conf.getBoolean("spark.memory.useLegacyMode", false)
     val memoryManager: MemoryManager =
@@ -337,20 +337,20 @@ object SparkEnv extends Logging {
     }
 
     val blockTransferService =
-      new NettyBlockTransferService(conf, securityManager, bindAddress, advertiseAddress,
+      new NettyBlockTransferService(conf, securityManager, bindAddress, advertiseAddress, // Shuffle时传输数据的时候用的
         blockManagerPort, numUsableCores)
 
-    val blockManagerMaster = new BlockManagerMaster(registerOrLookupEndpoint(
+    val blockManagerMaster = new BlockManagerMaster(registerOrLookupEndpoint( // 计算框架自带存储层，自己把持数据的存储，而不是一律写到HDFS
       BlockManagerMaster.DRIVER_ENDPOINT_NAME,
       new BlockManagerMasterEndpoint(rpcEnv, isLocal, conf, listenerBus)),
       conf, isDriver)
 
     // NB: blockManager is not valid until initialize() is called later.
-    val blockManager = new BlockManager(executorId, rpcEnv, blockManagerMaster,
+    val blockManager = new BlockManager(executorId, rpcEnv, blockManagerMaster, // 计算框架自带存储层，自己把持数据的存储，而不是一律写到HDFS
       serializerManager, conf, memoryManager, mapOutputTracker, shuffleManager,
       blockTransferService, securityManager, numUsableCores)
 
-    val metricsSystem = if (isDriver) {
+    val metricsSystem = if (isDriver) { // 度量系统，就想成一个计数器
       // Don't start metrics system right now for Driver.
       // We need to wait for the task scheduler to give us an app ID.
       // Then we can start the metrics system.

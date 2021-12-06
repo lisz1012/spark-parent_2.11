@@ -310,7 +310,7 @@ private[spark] class Executor(
         Executor.taskDeserializationProps.set(taskDescription.properties)
 
         updateDependencies(taskDescription.addedFiles, taskDescription.addedJars)
-        task = ser.deserialize[Task[Any]](
+        task = ser.deserialize[Task[Any]]( // Driver 那边Task被序列化过
           taskDescription.serializedTask, Thread.currentThread.getContextClassLoader)
         task.localProperties = taskDescription.properties
         task.setTaskMemoryManager(taskMemoryManager)

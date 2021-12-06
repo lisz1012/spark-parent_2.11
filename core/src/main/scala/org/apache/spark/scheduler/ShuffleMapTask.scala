@@ -82,7 +82,7 @@ private[spark] class ShuffleMapTask(
       threadMXBean.getCurrentThreadCpuTime
     } else 0L
     val ser = SparkEnv.get.closureSerializer.newInstance()
-    val (rdd, dep) = ser.deserialize[(RDD[_], ShuffleDependency[_, _, _])](
+    val (rdd, dep) = ser.deserialize[(RDD[_], ShuffleDependency[_, _, _])]( // submitMissingTasks的时候，taskBinaryBytes就把最后那个RDD和shuffleDep放进去了，现在反序列化读出来
       ByteBuffer.wrap(taskBinary.value), Thread.currentThread.getContextClassLoader)
     _executorDeserializeTime = System.currentTimeMillis() - deserializeStartTime
     _executorDeserializeCpuTime = if (threadMXBean.isCurrentThreadCpuTimeSupported) {
@@ -91,7 +91,7 @@ private[spark] class ShuffleMapTask(
 
     var writer: ShuffleWriter[Any, Any] = null
     try {
-      val manager = SparkEnv.get.shuffleManager
+      val manager = SparkEnv.get.shuffleManager // ShuffleManager 管理shuffle的上下游，ShuffleWriter和ShuffleReader。一个任务会调用ShuffleWriter的write方法把计算结果写到本地的文件系统里去，等待ShuffleReader来拉取
       writer = manager.getWriter[Any, Any](dep.shuffleHandle, partitionId, context)
       writer.write(rdd.iterator(partition, context).asInstanceOf[Iterator[_ <: Product2[Any, Any]]])
       writer.stop(success = true).get
