@@ -320,7 +320,7 @@ object SparkEnv extends Logging {
     val shuffleMgrName = conf.get("spark.shuffle.manager", "sort")
     val shuffleMgrClass =
       shortShuffleMgrNames.getOrElse(shuffleMgrName.toLowerCase(Locale.ROOT), shuffleMgrName)
-    val shuffleManager = instantiateClass[ShuffleManager](shuffleMgrClass) // 只有一个子类：SortShuffleManager，定义了数据往blockManager存的时候怎么去存？ShuffleRead/Write
+    val shuffleManager = instantiateClass[ShuffleManager](shuffleMgrClass) // 只有一个子类：SortShuffleManager，定义了数据往blockManager存的时候怎么去存？ShuffleRead/Write。代码中写了不同的算子，会造成使用不同的ShuffleManager
 
     val useLegacyMemoryManager = conf.getBoolean("spark.memory.useLegacyMode", false)
     val memoryManager: MemoryManager =
