@@ -289,13 +289,13 @@ object SparkEnv extends Logging {
     val closureSerializer = new JavaSerializer(conf)
 
     def registerOrLookupEndpoint(
-        name: String, endpointCreator: => RpcEndpoint):
+        name: String, endpointCreator: => RpcEndpoint): // 等待一个函数的传入，而不是函数生成的那个对象
       RpcEndpointRef = {
       if (isDriver) {
         logInfo("Registering " + name)
-        rpcEnv.setupEndpoint(name, endpointCreator)
+        rpcEnv.setupEndpoint(name, endpointCreator) // 如果是Driver，则触发传进来的new BlockManagerMasterEndpoint(rpcEnv, isLocal, conf, listenerBus))
       } else {
-        RpcUtils.makeDriverRef(name, conf, rpcEnv)
+        RpcUtils.makeDriverRef(name, conf, rpcEnv)  // 不会有 BlockManagerMasterEndpoint，而只是会有一个引用，且driver host的端口是7077，然后就可以发ask和send消息
       }
     }
 
@@ -340,14 +340,14 @@ object SparkEnv extends Logging {
       new NettyBlockTransferService(conf, securityManager, bindAddress, advertiseAddress, // Shuffle时传输数据的时候用的
         blockManagerPort, numUsableCores)
 
-    val blockManagerMaster = new BlockManagerMaster(registerOrLookupEndpoint( // 计算框架自带存储层，自己把持数据的存储，而不是一律写到HDFS
+    val blockManagerMaster = new BlockManagerMaster(registerOrLookupEndpoint( // 计算框架自带存储层，自己把持数据的存储，而不是一律写到HDFS，Driver端也有一个EndPointRef，只不过他真的有一个Endpoint在堆里
       BlockManagerMaster.DRIVER_ENDPOINT_NAME,
-      new BlockManagerMasterEndpoint(rpcEnv, isLocal, conf, listenerBus)),
+      new BlockManagerMasterEndpoint(rpcEnv, isLocal, conf, listenerBus)), // 注意：这里并没有立刻new 出来，而是作为一个函数类型的参数传进了registerOrLookupEndpoint
       conf, isDriver)
 
     // NB: blockManager is not valid until initialize() is called later.
-    val blockManager = new BlockManager(executorId, rpcEnv, blockManagerMaster, // 计算框架自带存储层，自己把持数据的存储，而不是一律写到HDFS
-      serializerManager, conf, memoryManager, mapOutputTracker, shuffleManager,
+    val blockManager = new BlockManager(executorId, rpcEnv, blockManagerMaster, // 计算框架自带存储层，自己把持数据的存储，而不是一律写到HDFS。BlockManagerMaster类比HDFS，相当于NN，而BlockManager相当于DN
+      serializerManager, conf, memoryManager, mapOutputTracker, shuffleManager, // 块管理器所管理的块可以存储在MemoryManager里面的Storage那部分空间或者磁盘的空间里
       blockTransferService, securityManager, numUsableCores)
 
     val metricsSystem = if (isDriver) { // 度量系统，就想成一个计数器

@@ -145,7 +145,7 @@ private[spark] class BlockManager(
   private val futureExecutionContext = ExecutionContext.fromExecutorService(
     ThreadUtils.newDaemonCachedThreadPool("block-manager-future", 128))
 
-  // Actual storage of where blocks are kept
+  // Actual storage of where blocks are kept 块可以放在内存或磁盘
   private[spark] val memoryStore =
     new MemoryStore(conf, blockInfoManager, serializerManager, memoryManager, this)
   private[spark] val diskStore = new DiskStore(conf, diskBlockManager, securityManager)

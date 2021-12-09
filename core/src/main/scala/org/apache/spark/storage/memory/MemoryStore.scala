@@ -106,7 +106,7 @@ private[spark] class MemoryStore(
     memoryManager.maxOnHeapStorageMemory + memoryManager.maxOffHeapStorageMemory
   }
 
-  if (maxMemory < unrollMemoryThreshold) {
+  if (maxMemory < unrollMemoryThreshold) { // maxMemory是个无参函数
     logWarning(s"Max memory ${Utils.bytesToString(maxMemory)} is less than the initial memory " +
       s"threshold ${Utils.bytesToString(unrollMemoryThreshold)} needed to store a block in " +
       s"memory. Please configure Spark with more memory.")

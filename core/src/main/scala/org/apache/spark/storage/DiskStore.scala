@@ -185,12 +185,12 @@ private class DiskBlockData(
     Utils.tryWithResource(open()) { channel =>
       if (blockSize < minMemoryMapBytes) {
         // For small files, directly read rather than memory map.
-        val buf = ByteBuffer.allocate(blockSize.toInt)
+        val buf = ByteBuffer.allocate(blockSize.toInt) // 堆内。走系统调用，最慢的
         JavaUtils.readFully(channel, buf)
         buf.flip()
         buf
       } else {
-        channel.map(MapMode.READ_ONLY, 0, file.length)
+        channel.map(MapMode.READ_ONLY, 0, file.length) // 堆外映射mmap，最快的。没有中间的（堆外）
       }
     }
   }

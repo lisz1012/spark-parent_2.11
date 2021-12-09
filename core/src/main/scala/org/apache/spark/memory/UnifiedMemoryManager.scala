@@ -209,7 +209,7 @@ object UnifiedMemoryManager {
    * Return the total amount of memory shared between execution and storage, in bytes.
    */
   private def getMaxMemory(conf: SparkConf): Long = {
-    val systemMemory = conf.getLong("spark.testing.memory", Runtime.getRuntime.maxMemory)
+    val systemMemory = conf.getLong("spark.testing.memory", Runtime.getRuntime.maxMemory) // JVM这个Java进程的最大堆空间，on heap memory
     val reservedMemory = conf.getLong("spark.testing.reservedMemory",
       if (conf.contains("spark.testing")) 0 else RESERVED_SYSTEM_MEMORY_BYTES)
     val minSystemMemory = (reservedMemory * 1.5).ceil.toLong
@@ -227,7 +227,7 @@ object UnifiedMemoryManager {
           s"--executor-memory option or spark.executor.memory in Spark configuration.")
       }
     }
-    val usableMemory = systemMemory - reservedMemory
+    val usableMemory = systemMemory - reservedMemory // 刨了450M，下面又乘了个0.6，保险。Spark在这里做了底层的内存管理，起码是规划
     val memoryFraction = conf.getDouble("spark.memory.fraction", 0.6)
     (usableMemory * memoryFraction).toLong
   }
