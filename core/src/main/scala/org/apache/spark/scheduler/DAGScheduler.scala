@@ -346,7 +346,7 @@ class DAGScheduler(
    * locations that are still available from the previous shuffle to avoid unnecessarily
    * regenerating data.
    */
-  def createShuffleMapStage(shuffleDep: ShuffleDependency[_, _, _], jobId: Int): ShuffleMapStage = {
+  def createShuffleMapStage(shuffleDep: ShuffleDependency[_, _, _], jobId: Int): ShuffleMapStage = { // ShuffleDependency衔接上下两个stage中的RDD
     val rdd = shuffleDep.rdd
     val numTasks = rdd.partitions.length
     val parents = getOrCreateParentStages(rdd, jobId)

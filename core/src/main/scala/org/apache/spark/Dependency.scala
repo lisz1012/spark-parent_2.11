@@ -87,7 +87,7 @@ class ShuffleDependency[K: ClassTag, V: ClassTag, C: ClassTag](
 
   val shuffleId: Int = _rdd.context.newShuffleId()
 
-  val shuffleHandle: ShuffleHandle = _rdd.context.env.shuffleManager.registerShuffle(
+  val shuffleHandle: ShuffleHandle = _rdd.context.env.shuffleManager.registerShuffle( // 拿到SparkEnv的shuffleManager，并调用registerShuffle，得到了ShuffleHandle。其中，会按照条件返回3种不同的Handlers
     shuffleId, _rdd.partitions.length, this)
 
   _rdd.sparkContext.cleaner.foreach(_.registerShuffleForCleanup(this))

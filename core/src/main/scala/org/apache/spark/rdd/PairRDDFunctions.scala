@@ -69,10 +69,10 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
    */
   @Experimental
   def combineByKeyWithClassTag[C](
-      createCombiner: V => C,
-      mergeValue: (C, V) => C,
-      mergeCombiners: (C, C) => C,
-      partitioner: Partitioner,
+      createCombiner: V => C,       // 数据需要聚合的话，第一条数据怎么处理
+      mergeValue: (C, V) => C,      // 后续的数据怎么处理
+      mergeCombiners: (C, C) => C,  // 多次溢写的结果怎么聚合
+      partitioner: Partitioner,     // 只要有Shuffle，数据就必须要打分区号，需要一个分区器
       mapSideCombine: Boolean = true,
       serializer: Serializer = null)(implicit ct: ClassTag[C]): RDD[(K, C)] = self.withScope {
     require(mergeCombiners != null, "mergeCombiners must be defined") // required as of Spark 0.9.0
