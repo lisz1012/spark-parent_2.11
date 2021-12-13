@@ -69,11 +69,11 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
    */
   @Experimental
   def combineByKeyWithClassTag[C](
-      createCombiner: V => C,       // 数据需要聚合的话，第一条数据怎么处理
-      mergeValue: (C, V) => C,      // 后续的数据怎么处理
-      mergeCombiners: (C, C) => C,  // 多次溢写的结果怎么聚合
-      partitioner: Partitioner,     // 只要有Shuffle，数据就必须要打分区号，需要一个分区器
-      mapSideCombine: Boolean = true,
+      createCombiner: V => C,          // 数据需要聚合的话，第一条数据怎么处理
+      mergeValue: (C, V) => C,         // 后续的数据怎么处理
+      mergeCombiners: (C, C) => C,     // 多次溢写的结果怎么聚合
+      partitioner: Partitioner,        // 只要有Shuffle，数据就必须要打分区号，需要一个分区器
+      mapSideCombine: Boolean = true,  // Map端要不要聚合（combine）。考虑数据能不能被压缩小，不能的话反而更浪费CPU
       serializer: Serializer = null)(implicit ct: ClassTag[C]): RDD[(K, C)] = self.withScope {
     require(mergeCombiners != null, "mergeCombiners must be defined") // required as of Spark 0.9.0
     if (keyClass.isArray) {
@@ -84,7 +84,7 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
         throw new SparkException("HashPartitioner cannot partition array keys.")
       }
     }
-    val aggregator = new Aggregator[K, V, C](
+    val aggregator = new Aggregator[K, V, C]( // 三个比较重要的算子（函数）封装成一个聚合器对象
       self.context.clean(createCombiner),
       self.context.clean(mergeValue),
       self.context.clean(mergeCombiners))
@@ -503,7 +503,7 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
     val mergeValue = (buf: CompactBuffer[V], v: V) => buf += v
     val mergeCombiners = (c1: CompactBuffer[V], c2: CompactBuffer[V]) => c1 ++= c2
     val bufs = combineByKeyWithClassTag[CompactBuffer[V]](
-      createCombiner, mergeValue, mergeCombiners, partitioner, mapSideCombine = false)
+      createCombiner, mergeValue, mergeCombiners, partitioner, mapSideCombine = false) // map端不聚合
     bufs.asInstanceOf[RDD[(K, Iterable[V])]]
   }
 
