@@ -46,7 +46,7 @@ private[spark] class MapPartitionsRDD[U: ClassTag, T: ClassTag](
   override def getPartitions: Array[Partition] = firstParent[T].partitions
 
   override def compute(split: Partition, context: TaskContext): Iterator[U] =
-    f(context, split.index, firstParent[T].iterator(split, context))
+    f(context, split.index, firstParent[T].iterator(split, context)) // 一个stage中位于中间的RDD会调用前面的（Parent）RDD的iterator，达到了RDD嵌套或者递归的效果
 
   override def clearDependencies() {
     super.clearDependencies()

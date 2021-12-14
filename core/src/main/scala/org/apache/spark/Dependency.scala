@@ -67,7 +67,7 @@ abstract class NarrowDependency[T](_rdd: RDD[T]) extends Dependency[T] {
  * @param mapSideCombine whether to perform partial aggregation (also known as map-side combine)
  */
 @DeveloperApi
-class ShuffleDependency[K: ClassTag, V: ClassTag, C: ClassTag]( // 比较复杂，主要是因为shuffleHandle的取值在不同条件下比较丰富, sortByKey、groupByKey、reduceByKey之所以不通，在于new ShuffleDependency的时候传进来的参数不同
+class ShuffleDependency[K: ClassTag, V: ClassTag, C: ClassTag]( // 比较复杂，主要是因为shuffleHandle的取值在不同条件下比较丰富, sortByKey、groupByKey、reduceByKey之所以不通，在于new ShuffleDependency的时候传进来的参数不同，这些参数最终是被拿来找registerShuffle方法去使用
     @transient private val _rdd: RDD[_ <: Product2[K, V]],
     val partitioner: Partitioner,
     val serializer: Serializer = SparkEnv.get.serializer,
@@ -88,7 +88,7 @@ class ShuffleDependency[K: ClassTag, V: ClassTag, C: ClassTag]( // 比较复杂�
   val shuffleId: Int = _rdd.context.newShuffleId()
 
   val shuffleHandle: ShuffleHandle = _rdd.context.env.shuffleManager.registerShuffle( // 拿到SparkEnv的shuffleManager，并调用registerShuffle，得到了ShuffleHandle。其中，会按照条件返回3种不同的Handlers
-    shuffleId, _rdd.partitions.length, this)
+    shuffleId, _rdd.partitions.length, this) // 返回那种handle就看dependency
 
   _rdd.sparkContext.cleaner.foreach(_.registerShuffleForCleanup(this))
 }

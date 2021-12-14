@@ -87,7 +87,7 @@ private[spark] class SortShuffleManager(conf: SparkConf) extends ShuffleManager 
   override def registerShuffle[K, V, C](
       shuffleId: Int,
       numMaps: Int,
-      dependency: ShuffleDependency[K, V, C]): ShuffleHandle = {
+      dependency: ShuffleDependency[K, V, C]): ShuffleHandle = { //  基本上就是根据dependency返回handler
     if (SortShuffleWriter.shouldBypassMergeSort(conf, dependency)) {
       // If there are fewer than spark.shuffle.sort.bypassMergeThreshold partitions and we don't
       // need map-side aggregation, then write numPartitions files directly and just concatenate
@@ -100,7 +100,7 @@ private[spark] class SortShuffleManager(conf: SparkConf) extends ShuffleManager 
       // Otherwise, try to buffer map outputs in a serialized form, since this is more efficient:
       new SerializedShuffleHandle[K, V](
         shuffleId, numMaps, dependency.asInstanceOf[ShuffleDependency[K, V, V]])
-    } else {
+    } else { // 可以处理所有计算逻辑的shuffle，而前面的两个case，是特殊调优加速用的。为什么Spark比MR快的原因之一
       // Otherwise, buffer map outputs in a deserialized form:
       new BaseShuffleHandle(shuffleId, numMaps, dependency)
     }
@@ -120,15 +120,15 @@ private[spark] class SortShuffleManager(conf: SparkConf) extends ShuffleManager 
   }
 
   /** Get a writer for a given partition. Called on executors by map tasks. */
-  override def getWriter[K, V](
+  override def getWriter[K, V]( // 根据不同的Handle，返回不同的Writer
       handle: ShuffleHandle,
       mapId: Int,
       context: TaskContext): ShuffleWriter[K, V] = {
     numMapsForShuffle.putIfAbsent(
       handle.shuffleId, handle.asInstanceOf[BaseShuffleHandle[_, _, _]].numMaps)
     val env = SparkEnv.get
-    handle match {
-      case unsafeShuffleHandle: SerializedShuffleHandle[K @unchecked, V @unchecked] =>
+    handle match { // new ShuffledRDD -> dependency -> handle ShuffleManager.registerShuffle()时的Dependency参数决定ShuffleManager给这个Shuffle注册成了哪种Handler，而Handler决定了两个RDD之间的Shuffle未来使用的是哪一种writer
+      case unsafeShuffleHandle: SerializedShuffleHandle[K @unchecked, V @unchecked] =>  // 调优最狠的。纯内存的字节数组、data page等
         new UnsafeShuffleWriter(
           env.blockManager,
           shuffleBlockResolver.asInstanceOf[IndexShuffleBlockResolver],
@@ -137,7 +137,7 @@ private[spark] class SortShuffleManager(conf: SparkConf) extends ShuffleManager 
           mapId,
           context,
           env.conf)
-      case bypassMergeSortHandle: BypassMergeSortShuffleHandle[K @unchecked, V @unchecked] =>
+      case bypassMergeSortHandle: BypassMergeSortShuffleHandle[K @unchecked, V @unchecked] => // 比下面的少了个排序。MR的弊端是不管任何情况，都需要排序。Spark显然是发现了这个问题
         new BypassMergeSortShuffleWriter(
           env.blockManager,
           shuffleBlockResolver.asInstanceOf[IndexShuffleBlockResolver],
@@ -184,21 +184,21 @@ private[spark] object SortShuffleManager extends Logging {
   def canUseSerializedShuffle(dependency: ShuffleDependency[_, _, _]): Boolean = {
     val shufId = dependency.shuffleId
     val numPartitions = dependency.partitioner.numPartitions
-    if (!dependency.serializer.supportsRelocationOfSerializedObjects) {
+    if (!dependency.serializer.supportsRelocationOfSerializedObjects) { // 是否支持可以寻址序列化的对象，也就是把一个对象的所有属性都序列化成一个字节数组，能不能把其中的某个属性准确地取出来
       log.debug(s"Can't use serialized shuffle for shuffle $shufId because the serializer, " +
         s"${dependency.serializer.getClass.getName}, does not support object relocation")
       false
-    } else if (dependency.aggregator.isDefined) {
+    } else if (dependency.aggregator.isDefined) { // Reduce端有聚合也不能走序列化的Handle
       log.debug(
         s"Can't use serialized shuffle for shuffle $shufId because an aggregator is defined")
       false
-    } else if (numPartitions > MAX_SHUFFLE_OUTPUT_PARTITIONS_FOR_SERIALIZED_MODE) {
+    } else if (numPartitions > MAX_SHUFFLE_OUTPUT_PARTITIONS_FOR_SERIALIZED_MODE) { // Shuffle之后的RDD的分区数要小于16777215，才能走序列化的Handle
       log.debug(s"Can't use serialized shuffle for shuffle $shufId because it has more than " +
         s"$MAX_SHUFFLE_OUTPUT_PARTITIONS_FOR_SERIALIZED_MODE partitions")
       false
     } else {
       log.debug(s"Can use serialized shuffle for shuffle $shufId")
-      true
+      true // 一个Shuffle想要使用SerializedShuffleHandle，成本/要求 是很高的
     }
   }
 }

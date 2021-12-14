@@ -84,7 +84,7 @@ class ShuffledRDD[K: ClassTag, V: ClassTag, C: ClassTag](
         serializerManager.getSerializer(implicitly[ClassTag[K]], implicitly[ClassTag[V]])
       }
     }
-    List(new ShuffleDependency(prev, part, serializer, keyOrdering, aggregator, mapSideCombine))
+    List(new ShuffleDependency(prev, part, serializer, keyOrdering, aggregator, mapSideCombine)) // sortByKey、groupByKey、reduceByKey之所以不通，在于new ShuffleDependency的时候传进来的参数不同，这些参数最终是被拿来找registerShuffle方法去使用
   }
 
   override val partitioner = Some(part)
@@ -101,7 +101,7 @@ class ShuffledRDD[K: ClassTag, V: ClassTag, C: ClassTag](
 
   override def compute(split: Partition, context: TaskContext): Iterator[(K, C)] = {
     val dep = dependencies.head.asInstanceOf[ShuffleDependency[K, V, C]]
-    SparkEnv.get.shuffleManager.getReader(dep.shuffleHandle, split.index, split.index + 1, context)
+    SparkEnv.get.shuffleManager.getReader(dep.shuffleHandle, split.index, split.index + 1, context) // 在Task的左边缘拿到Reader，拉取数据之后再一条条的传到Writer那一端，这个Task便结束了
       .read()
       .asInstanceOf[Iterator[(K, C)]]
   }
