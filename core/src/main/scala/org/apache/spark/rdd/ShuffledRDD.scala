@@ -39,7 +39,7 @@ private[spark] class ShuffledRDDPartition(val idx: Int) extends Partition {
 // TODO: Make this return RDD[Product2[K, C]] or have some way to configure mutable pairs
 @DeveloperApi
 class ShuffledRDD[K: ClassTag, V: ClassTag, C: ClassTag](
-    @transient var prev: RDD[_ <: Product2[K, V]], // shuffle前面的那个RDD，所有RDD顺藤摸瓜
+    @transient var prev: RDD[_ <: Product2[K, V]], // shuffle前面的那个RDD，所有RDD顺藤摸瓜。序列化最后那个RDD。有多少个分区就有多少个task，stage他的task的的并行度是由最后一个RDD的分区数决定的
     part: Partitioner)
   extends RDD[(K, C)](prev.context, Nil) {
 
