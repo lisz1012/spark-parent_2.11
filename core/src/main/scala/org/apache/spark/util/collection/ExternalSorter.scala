@@ -191,7 +191,7 @@ private[spark] class ExternalSorter[K, V, C](
       while (records.hasNext) {
         addElementsRead()
         kv = records.next()
-        map.changeValue((getPartition(kv._1), kv._1), update)
+        map.changeValue((getPartition(kv._1), kv._1), update) // 需要聚合用map
         maybeSpillCollection(usingMap = true)
       }
     } else {
@@ -199,7 +199,7 @@ private[spark] class ExternalSorter[K, V, C](
       while (records.hasNext) { // 迭代计算的数据来自HadoopRDD的recordReader或者shuffledRDD的reader，要么是文件，要么是shuffle的结果
         addElementsRead()
         val kv = records.next()
-        buffer.insert(getPartition(kv._1), kv._1, kv._2.asInstanceOf[C]) // K, V, P
+        buffer.insert(getPartition(kv._1), kv._1, kv._2.asInstanceOf[C]) // K, V, P 不需要聚合用Buffer
         maybeSpillCollection(usingMap = false)
       }
     }

@@ -49,10 +49,10 @@ private[spark] class SortShuffleWriter[K, V, C](
 
   /** Write a bunch of records to this task's output */
   override def write(records: Iterator[Product2[K, V]]): Unit = { // 一个任务的最后的那个RDD的迭代器
-    sorter = if (dep.mapSideCombine) {
+    sorter = if (dep.mapSideCombine) { // 聚不聚合都返回ExternalSorter，只不过传参有差异
       require(dep.aggregator.isDefined, "Map-side combine without Aggregator specified!")
       new ExternalSorter[K, V, C](
-        context, dep.aggregator, Some(dep.partitioner), dep.keyOrdering, dep.serializer)
+        context, dep.aggregator, Some(dep.partitioner), dep.keyOrdering, dep.serializer) // aggregator：第一条记录、后写的聚合，多次溢写的聚合，三个函数
     } else {
       // In this case we pass neither an aggregator nor an ordering to the sorter, because we don't
       // care whether the keys get sorted in each partition; that will be done on the reduce side
