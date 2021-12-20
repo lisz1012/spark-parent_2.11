@@ -199,7 +199,7 @@ private[spark] class ExternalSorter[K, V, C](
       while (records.hasNext) { // 迭代计算的数据来自HadoopRDD的recordReader或者shuffledRDD的reader，要么是文件，要么是shuffle的结果
         addElementsRead()
         val kv = records.next()
-        buffer.insert(getPartition(kv._1), kv._1, kv._2.asInstanceOf[C]) // K, V, P 不需要聚合用Buffer
+        buffer.insert(getPartition(kv._1), kv._1, kv._2.asInstanceOf[C]) // K, V, P 不需要聚合用Buffer，这里就有点像MR了，只不过MR的缓冲区是一个字节数组，放的是序列化之后的键值对
         maybeSpillCollection(usingMap = false)
       }
     }
@@ -218,7 +218,7 @@ private[spark] class ExternalSorter[K, V, C](
         map = new PartitionedAppendOnlyMap[K, C]
       }
     } else {
-      estimatedSize = buffer.estimateSize()
+      estimatedSize = buffer.estimateSize() // 涉及到计算内存的大小
       if (maybeSpill(buffer, estimatedSize)) {
         buffer = new PartitionedPairBuffer[K, C]
       }
@@ -236,7 +236,7 @@ private[spark] class ExternalSorter[K, V, C](
    * @param collection whichever collection we're using (map or buffer)
    */
   override protected[this] def spill(collection: WritablePartitionedPairCollection[K, C]): Unit = {
-    val inMemoryIterator = collection.destructiveSortedWritablePartitionedIterator(comparator)
+    val inMemoryIterator = collection.destructiveSortedWritablePartitionedIterator(comparator) // 排序在这里面发生，且返回一个对于分区的迭代器，只是按照分区把各个键值对在小文件中排序 
     val spillFile = spillMemoryIteratorToDisk(inMemoryIterator)
     spills += spillFile
   }
@@ -267,7 +267,7 @@ private[spark] class ExternalSorter[K, V, C](
     // Because these files may be read during shuffle, their compression must be controlled by
     // spark.shuffle.compress instead of spark.shuffle.spill.compress, so we need to use
     // createTempShuffleBlock here; see SPARK-3426 for more context.
-    val (blockId, file) = diskBlockManager.createTempShuffleBlock()
+    val (blockId, file) = diskBlockManager.createTempShuffleBlock() // 临时文件的ID，随便取个名字
 
     // These variables are reset after each flush
     var objectsWritten: Long = 0

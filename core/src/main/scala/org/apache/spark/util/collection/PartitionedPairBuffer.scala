@@ -42,14 +42,14 @@ private[spark] class PartitionedPairBuffer[K, V](initialCapacity: Int = 64)
   // and the values, so that we can sort them efficiently with KVArraySortDataFormat.
   private var capacity = initialCapacity
   private var curSize = 0
-  private var data = new Array[AnyRef](2 * initialCapacity)
+  private var data = new Array[AnyRef](2 * initialCapacity) // data存储数据的索引，成对放，键值对。溢写的时候，一定会发生排序，因为有来自不同分区的数据，需要归并成一个文件，会生成分区有序的文件及其索引
 
   /** Add an element into the buffer */
-  def insert(partition: Int, key: K, value: V): Unit = {
-    if (curSize == capacity) {
+  def insert(partition: Int, key: K, value: V): Unit = { // insert的时候没有排序 ，溢写的时候要排序，付出了CPU计算的代价，换取了不开辟小文件的好处
+    if (curSize == capacity) { // 插入之前先看满了吗？要是满了就先扩容数组
       growArray()
     }
-    data(2 * curSize) = (partition, key.asInstanceOf[AnyRef])
+    data(2 * curSize) = (partition, key.asInstanceOf[AnyRef]) // Tuple2
     data(2 * curSize + 1) = value.asInstanceOf[AnyRef]
     curSize += 1
     afterUpdate()
