@@ -70,7 +70,7 @@ import org.apache.spark.util.Utils;
  * <p>
  * There have been proposals to completely remove this code path; see SPARK-6026 for details.
  */ //为什么要ByPass？groupByKey、sortByKey跟combinedByKey不同，不需要上游进行聚合. 而在MR中，中间必须有一步排序，这就是优化。Spark1.6以前，map （kvp）之后，每个分区的数据组成一个小文件，小文件可能比较多，随机读就比较耗性能。随即读些时磁盘的瓶颈。Spark按照分区输出独立的文件，最后现行拼接，MR内存缓冲多个分区的数据，溢写成小文件，但最后要归并算法拼接成全局有序的文件。最后两者都会生成一个index文件
-final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> {
+final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> { // ByPass这个类对于MR的shuffle的步骤做了精简，是他的一个子集。
 
   private static final Logger logger = LoggerFactory.getLogger(BypassMergeSortShuffleWriter.class);
 
@@ -160,7 +160,7 @@ final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> {
     File output = shuffleBlockResolver.getDataFile(shuffleId, mapId);
     File tmp = Utils.tempFileWith(output);
     try {
-      partitionLengths = writePartitionedFile(tmp); // 把小文件连接起来
+      partitionLengths = writePartitionedFile(tmp); // 把小文件连接起来，ByPass了排序聚合等步骤，相对比较快。各个小文件按照分区号分别写内容，小文件内部是无序的
       shuffleBlockResolver.writeIndexFileAndCommit(shuffleId, mapId, partitionLengths, tmp); //写索引文件
     } finally {
       if (tmp.exists() && !tmp.delete()) {
