@@ -28,7 +28,7 @@ private[spark] class SizeTrackingAppendOnlyMap[K, V]
     super.afterUpdate()
   }
 
-  override def changeValue(key: K, updateFunc: (Boolean, V) => V): V = {
+  override def changeValue(key: K, updateFunc: (Boolean, V) => V): V = { // 计数、度量统计
     val newValue = super.changeValue(key, updateFunc)
     super.afterUpdate()
     newValue

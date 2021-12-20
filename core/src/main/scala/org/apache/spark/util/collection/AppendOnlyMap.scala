@@ -125,7 +125,7 @@ class AppendOnlyMap[K, V](initialCapacity: Int = 64)
    * Set the value for key to updateFunc(hadValue, oldValue), where oldValue will be the old value
    * for key, if any, or null otherwise. Returns the newly updated value.
    */
-  def changeValue(key: K, updateFunc: (Boolean, V) => V): V = {
+  def changeValue(key: K, updateFunc: (Boolean, V) => V): V = { // reduceByKey会走到这里
     assert(!destroyed, destructionMessage)
     val k = key.asInstanceOf[AnyRef]
     if (k.eq(null)) {
@@ -136,21 +136,21 @@ class AppendOnlyMap[K, V](initialCapacity: Int = 64)
       haveNullValue = true
       return nullValue
     }
-    var pos = rehash(k.hashCode) & mask
+    var pos = rehash(k.hashCode) & mask // 类似 0111111，0-64的某个值，类似哈希区模
     var i = 1
     while (true) {
       val curKey = data(2 * pos)
-      if (curKey.eq(null)) {
-        val newValue = updateFunc(false, null.asInstanceOf[V])
+      if (curKey.eq(null)) { // 数组的这个位置没有被使用，updateFunc的createCombiner被触发
+        val newValue = updateFunc(false, null.asInstanceOf[V]) // 之前没有key且没有老的值，oldValue未空
         data(2 * pos) = k
         data(2 * pos + 1) = newValue.asInstanceOf[AnyRef]
         incrementSize()
         return newValue
-      } else if (k.eq(curKey) || k.equals(curKey)) {
-        val newValue = updateFunc(true, data(2 * pos + 1).asInstanceOf[V])
-        data(2 * pos + 1) = newValue.asInstanceOf[AnyRef]
+      } else if (k.eq(curKey) || k.equals(curKey)) { // key一样，则要merge，老值加新值
+        val newValue = updateFunc(true, data(2 * pos + 1).asInstanceOf[V]) // updateFunc的mergeValue被触发
+        data(2 * pos + 1) = newValue.asInstanceOf[AnyRef]  // 用上面求得的和更新value
         return newValue
-      } else {
+      } else { // 哈希碰撞
         val delta = i
         pos = (pos + delta) & mask
         i += 1
@@ -211,7 +211,7 @@ class AppendOnlyMap[K, V](initialCapacity: Int = 64)
   private def rehash(h: Int): Int = Hashing.murmur3_32().hashInt(h).asInt()
 
   /** Double the table's size and re-hash everything */
-  protected def growTable() {
+  protected def growTable() { // 扩容的时候没有调用System.arraycopy是由于牵扯到rehash
     // capacity < MAXIMUM_CAPACITY (2 ^ 29) so capacity * 2 won't overflow
     val newCapacity = capacity * 2
     require(newCapacity <= MAXIMUM_CAPACITY, s"Can't contain more than ${growThreshold} elements")

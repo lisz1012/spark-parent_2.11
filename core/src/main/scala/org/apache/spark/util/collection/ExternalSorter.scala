@@ -185,13 +185,13 @@ private[spark] class ExternalSorter[K, V, C](
       val mergeValue = aggregator.get.mergeValue
       val createCombiner = aggregator.get.createCombiner
       var kv: Product2[K, V] = null
-      val update = (hadValue: Boolean, oldValue: C) => {
+      val update = (hadValue: Boolean, oldValue: C) => { // 没有就直接放进去，有就累加。如果hadValue未true，则必须给出老志，反之就不用给了
         if (hadValue) mergeValue(oldValue, kv._2) else createCombiner(kv._2)
       }
       while (records.hasNext) {
         addElementsRead()
         kv = records.next()
-        map.changeValue((getPartition(kv._1), kv._1), update) // 需要聚合用map
+        map.changeValue((getPartition(kv._1), kv._1), update) // 需要聚合用map。传update的时候kv已经闭包进入了update函数体
         maybeSpillCollection(usingMap = true)
       }
     } else {
@@ -236,7 +236,7 @@ private[spark] class ExternalSorter[K, V, C](
    * @param collection whichever collection we're using (map or buffer)
    */
   override protected[this] def spill(collection: WritablePartitionedPairCollection[K, C]): Unit = {
-    val inMemoryIterator = collection.destructiveSortedWritablePartitionedIterator(comparator) // 排序在这里面发生，且返回一个对于分区的迭代器，只是按照分区把各个键值对在小文件中排序 
+    val inMemoryIterator = collection.destructiveSortedWritablePartitionedIterator(comparator) // 排序在这里面发生，且返回一个对于分区的迭代器，只是按照分区把各个键值对在小文件中排序
     val spillFile = spillMemoryIteratorToDisk(inMemoryIterator)
     spills += spillFile
   }
