@@ -146,7 +146,7 @@ private[spark] class IndexShuffleBlockResolver(
         // We take in lengths of each block, need to convert it to offsets.
         var offset = 0L
         out.writeLong(offset)
-        for (length <- lengths) {
+        for (length <- lengths) { // length就是代表各个分区的数据的大小，每次往索引文件里写一个起始位置
           offset += length
           out.writeLong(offset)
         }
