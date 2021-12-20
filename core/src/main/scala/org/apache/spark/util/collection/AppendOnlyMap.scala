@@ -138,7 +138,7 @@ class AppendOnlyMap[K, V](initialCapacity: Int = 64)
     }
     var pos = rehash(k.hashCode) & mask // 类似 0111111，0-64的某个值，类似哈希区模
     var i = 1
-    while (true) {
+    while (true) { // 线性探测再散列，规避哈希碰撞
       val curKey = data(2 * pos)
       if (curKey.eq(null)) { // 数组的这个位置没有被使用，updateFunc的createCombiner被触发
         val newValue = updateFunc(false, null.asInstanceOf[V]) // 之前没有key且没有老的值，oldValue未空
@@ -147,7 +147,7 @@ class AppendOnlyMap[K, V](initialCapacity: Int = 64)
         incrementSize()
         return newValue
       } else if (k.eq(curKey) || k.equals(curKey)) { // key一样，则要merge，老值加新值
-        val newValue = updateFunc(true, data(2 * pos + 1).asInstanceOf[V]) // updateFunc的mergeValue被触发
+        val newValue = updateFunc(true, data(2 * pos + 1).asInstanceOf[V]) // updateFunc的mergeValue被触发。比MR的环形缓冲区的优点是：环形缓冲区是存完了内存，到马上要溢写的时候才会merge，这里是存的时候就merge省了内存，省内存就省了溢写次数
         data(2 * pos + 1) = newValue.asInstanceOf[AnyRef]  // 用上面求得的和更新value
         return newValue
       } else { // 哈希碰撞
@@ -211,7 +211,7 @@ class AppendOnlyMap[K, V](initialCapacity: Int = 64)
   private def rehash(h: Int): Int = Hashing.murmur3_32().hashInt(h).asInt()
 
   /** Double the table's size and re-hash everything */
-  protected def growTable() { // 扩容的时候没有调用System.arraycopy是由于牵扯到rehash
+  protected def growTable() { // 扩容的时候没有调用System.arraycopy是由于牵扯到rehash。扩容保证了changeValue中的死循环一直能找到空位
     // capacity < MAXIMUM_CAPACITY (2 ^ 29) so capacity * 2 won't overflow
     val newCapacity = capacity * 2
     require(newCapacity <= MAXIMUM_CAPACITY, s"Can't contain more than ${growThreshold} elements")
