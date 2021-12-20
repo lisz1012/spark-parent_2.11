@@ -69,7 +69,7 @@ import org.apache.spark.util.Utils;
  * refactored into its own class in order to reduce code complexity; see SPARK-7855 for details.
  * <p>
  * There have been proposals to completely remove this code path; see SPARK-6026 for details.
- */
+ */ //为什么要ByPass？groupByKey、sortByKey跟combinedByKey不同，不需要上游进行聚合. 而在MR中，中间必须有一步排序，这就是优化。Spark1.6以前，map （kvp）之后，每个分区的数据组成一个小文件，小文件可能比较多，随机读就比较耗性能。随即读些时磁盘的瓶颈。Spark按照分区输出独立的文件，最后现行拼接，MR内存缓冲多个分区的数据，溢写成小文件，但最后要归并算法拼接成全局有序的文件。最后两者都会生成一个index文件
 final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> {
 
   private static final Logger logger = LoggerFactory.getLogger(BypassMergeSortShuffleWriter.class);
@@ -130,7 +130,7 @@ final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> {
     }
     final SerializerInstance serInstance = serializer.newInstance();
     final long openStartTime = System.nanoTime();
-    partitionWriters = new DiskBlockObjectWriter[numPartitions];
+    partitionWriters = new DiskBlockObjectWriter[numPartitions]; // 下游的分区数
     partitionWriterSegments = new FileSegment[numPartitions];
     for (int i = 0; i < numPartitions; i++) {
       final Tuple2<TempShuffleBlockId, File> tempShuffleBlockIdPlusFile =
@@ -148,7 +148,7 @@ final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> {
     while (records.hasNext()) {
       final Product2<K, V> record = records.next();
       final K key = record._1();
-      partitionWriters[partitioner.getPartition(key)].write(key, record._2()); // 根据分区器得到分区号，然后取得writer。
+      partitionWriters[partitioner.getPartition(key)].write(key, record._2()); // 根据分区器得到分区号，然后取得writer。每个分区有各自的writer
     }
 
     for (int i = 0; i < numPartitions; i++) {
@@ -161,7 +161,7 @@ final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> {
     File tmp = Utils.tempFileWith(output);
     try {
       partitionLengths = writePartitionedFile(tmp);
-      shuffleBlockResolver.writeIndexFileAndCommit(shuffleId, mapId, partitionLengths, tmp);
+      shuffleBlockResolver.writeIndexFileAndCommit(shuffleId, mapId, partitionLengths, tmp); //写索引文件
     } finally {
       if (tmp.exists() && !tmp.delete()) {
         logger.error("Error while deleting temp file {}", tmp.getAbsolutePath());
@@ -192,13 +192,13 @@ final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> {
     final long writeStartTime = System.nanoTime();
     boolean threwException = true;
     try {
-      for (int i = 0; i < numPartitions; i++) {
+      for (int i = 0; i < numPartitions; i++) { // 把各个小文件里的in往统一的out里面写入
         final File file = partitionWriterSegments[i].file();
         if (file.exists()) {
           final FileInputStream in = new FileInputStream(file);
           boolean copyThrewException = true;
           try {
-            lengths[i] = Utils.copyStream(in, out, false, transferToEnabled); // 待会儿拿这个lengths为依据，创建索引文件
+            lengths[i] = Utils.copyStream(in, out, false, transferToEnabled); // 都往out所指向的文件里追加。待会儿拿这个lengths为依据，创建索引文件
             copyThrewException = false;
           } finally {
             Closeables.close(in, copyThrewException);
