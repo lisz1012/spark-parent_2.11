@@ -148,7 +148,7 @@ final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> {
     while (records.hasNext()) {
       final Product2<K, V> record = records.next();
       final K key = record._1();
-      partitionWriters[partitioner.getPartition(key)].write(key, record._2()); // 根据分区器得到分区号，然后取得writer。每个分区有各自的writer
+      partitionWriters[partitioner.getPartition(key)].write(key, record._2()); // 根据分区器得到分区号，然后取得writer。每个分区有各自的writer。分区数太多则小文件太多，不利于性能，所以SortShuffleManager中的第一个if里面判断条件要求下游分区数不超过200
     }
 
     for (int i = 0; i < numPartitions; i++) {
@@ -160,7 +160,7 @@ final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> {
     File output = shuffleBlockResolver.getDataFile(shuffleId, mapId);
     File tmp = Utils.tempFileWith(output);
     try {
-      partitionLengths = writePartitionedFile(tmp);
+      partitionLengths = writePartitionedFile(tmp); // 把小文件连接起来
       shuffleBlockResolver.writeIndexFileAndCommit(shuffleId, mapId, partitionLengths, tmp); //写索引文件
     } finally {
       if (tmp.exists() && !tmp.delete()) {

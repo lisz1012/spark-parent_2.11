@@ -123,8 +123,8 @@ private[spark] class ExternalSorter[K, V, C](
   // Data structures to store in-memory objects before we spill. Depending on whether we have an
   // Aggregator set, we either put objects into an AppendOnlyMap where we combine them, or we
   // store them in an array buffer.
-  @volatile private var map = new PartitionedAppendOnlyMap[K, C]
-  @volatile private var buffer = new PartitionedPairBuffer[K, C]
+  @volatile private var map = new PartitionedAppendOnlyMap[K, C] // map和buffer两种形式
+  @volatile private var buffer = new PartitionedPairBuffer[K, C] // buffer就是模仿的MR
 
   // Total spilling statistics
   private var _diskBytesSpilled = 0L

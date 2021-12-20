@@ -55,7 +55,7 @@ class AppendOnlyMap[K, V](initialCapacity: Int = 64)
 
   // Holds keys and values in the same array for memory locality; specifically, the order of
   // elements is key0, value0, key1, value1, key2, value2, etc.
-  private var data = new Array[AnyRef](2 * capacity)
+  private var data = new Array[AnyRef](2 * capacity) // 用数组来做一个HashMap
 
   // Treat the null key differently so we can use nulls in "data" to represent empty items.
   private var haveNullValue = false
@@ -113,7 +113,7 @@ class AppendOnlyMap[K, V](initialCapacity: Int = 64)
       } else if (k.eq(curKey) || k.equals(curKey)) {
         data(2 * pos + 1) = value.asInstanceOf[AnyRef]
         return
-      } else {
+      } else { // 解决Hash碰撞
         val delta = i
         pos = (pos + delta) & mask
         i += 1
