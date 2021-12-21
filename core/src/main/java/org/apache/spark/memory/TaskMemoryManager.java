@@ -123,7 +123,7 @@ public class TaskMemoryManager {
    * Construct a new TaskMemoryManager.
    */
   public TaskMemoryManager(MemoryManager memoryManager, long taskAttemptId) {
-    this.tungstenMemoryMode = memoryManager.tungstenMemoryMode(); // 钨丝计划，用unsafe的方式给spark提速
+    this.tungstenMemoryMode = memoryManager.tungstenMemoryMode(); // 钨丝计划，用unsafe的方式给spark的计算提速
     this.memoryManager = memoryManager;
     this.taskAttemptId = taskAttemptId;
     this.consumers = new HashSet<>();
@@ -135,7 +135,7 @@ public class TaskMemoryManager {
    *
    * @return number of bytes successfully granted (<= N).
    */
-  public long acquireExecutionMemory(long required, MemoryConsumer consumer) {
+  public long acquireExecutionMemory(long required, MemoryConsumer consumer) { //申请执行内存
     assert(required >= 0);
     assert(consumer != null);
     MemoryMode mode = consumer.getMode();
@@ -144,7 +144,7 @@ public class TaskMemoryManager {
     // off-heap memory. This is subject to change, though, so it may be risky to make this
     // optimization now in case we forget to undo it late when making changes.
     synchronized (this) {
-      long got = memoryManager.acquireExecutionMemory(required, taskAttemptId, mode);
+      long got = memoryManager.acquireExecutionMemory(required, taskAttemptId, mode); // 最终还是用到了memoryManager
 
       // Try to release memory from other consumers first, then we can reduce the frequency of
       // spilling, avoid to have too many spilled files.
