@@ -223,8 +223,8 @@ private[spark] abstract class MemoryManager(
       case MemoryMode.ON_HEAP => onHeapExecutionMemoryPool.poolSize
       case MemoryMode.OFF_HEAP => offHeapExecutionMemoryPool.poolSize
     }
-    val size = ByteArrayMethods.nextPowerOf2(maxTungstenMemory / cores / safetyFactor)
-    val default = math.min(maxPageSize, math.max(minPageSize, size))
+    val size = ByteArrayMethods.nextPowerOf2(maxTungstenMemory / cores / safetyFactor) // 除以核心数是因为默认一个核心跑一个任务，现在是要为一个任务来划分内存页
+    val default = math.min(maxPageSize, math.max(minPageSize, size)) // 算出来的size如果位于1M-64M之间，则default就是size
     conf.getSizeAsBytes("spark.buffer.pageSize", default)
   }
 

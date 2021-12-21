@@ -400,7 +400,7 @@ final class ShuffleExternalSorter extends MemoryConsumer {
     pageCursor += 4;
     Platform.copyMemory(recordBase, recordOffset, base, pageCursor, length); // 进来的数据存入页，页可能在堆内，也可能在堆外，base为null就往堆外拷贝。这里的base和pageCursor是目标地址
     pageCursor += length;
-    inMemSorter.insertRecord(recordAddress, partitionId); // recordBase实际上是个字节数组，他没有传进insertRecord，存的是索引，排序排的是索引
+    inMemSorter.insertRecord(recordAddress, partitionId); // recordBase实际上是个字节数组（地址），他没有传进insertRecord，存的是索引，排序排的是索引。接收一个分区号是为了相同分区的排在一起，分区号是int，4个字节。堆里开辟了索引，指向堆里（外）的一个位置
   }
 
   /**

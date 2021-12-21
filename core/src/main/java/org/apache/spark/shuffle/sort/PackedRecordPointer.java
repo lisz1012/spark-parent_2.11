@@ -74,13 +74,13 @@ final class PackedRecordPointer {
    * @param partitionId a shuffle partition id (maximum value of 2^24).
    * @return a packed pointer that can be decoded using the {@link PackedRecordPointer} class.
    */
-  public static long packPointer(long recordPointer, int partitionId) {
+  public static long packPointer(long recordPointer, int partitionId) { // 堆里开辟了索引，指向堆里（外）的一个位置
     assert (partitionId <= MAXIMUM_PARTITION_ID);
     // Note that without word alignment we can address 2^27 bytes = 128 megabytes per page.
     // Also note that this relies on some internals of how TaskMemoryManager encodes its addresses.
-    final long pageNumber = (recordPointer & MASK_LONG_UPPER_13_BITS) >>> 24;
+    final long pageNumber = (recordPointer & MASK_LONG_UPPER_13_BITS) >>> 24; // 高24位移到了最右边，下面的计算让高低24位在64位中分立两边，分别描述分区号和寻址地址
     final long compressedAddress = pageNumber | (recordPointer & MASK_LONG_LOWER_27_BITS);
-    return (((long) partitionId) << 40) | compressedAddress; // 这就是为什么下游分区数不超过16777215的时候才能走堆外内存，这个partitionId也在索引里，这就可以根据partition排序了。这个返回值里有partitionId、pageNumber、offsetInPage
+    return (((long) partitionId) << 40) | compressedAddress; // 这就是为什么下游分区数不超过16777215的时候才能走堆外内存，这个partitionId也在索引里，这就可以根据partition排序了。这个返回值里有partitionId、pageNumber、offsetInPage。第24位移到了最左边
   }
 
   private long packedRecordPointer;
