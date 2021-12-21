@@ -58,7 +58,7 @@ import org.apache.spark.util.Utils;
 import org.apache.spark.internal.config.package$;
 
 @Private
-public class UnsafeShuffleWriter<K, V> extends ShuffleWriter<K, V> {
+public class UnsafeShuffleWriter<K, V> extends ShuffleWriter<K, V> { // BypassMergeSortShuffleWriter 和 SortShuffleWriter已经可以满足功能了，但是UnsafeShuffleWriter可以利用堆外内存优化性能
 
   private static final Logger logger = LoggerFactory.getLogger(UnsafeShuffleWriter.class);
 
@@ -217,7 +217,7 @@ public class UnsafeShuffleWriter<K, V> extends ShuffleWriter<K, V> {
       partitioner.numPartitions(),
       sparkConf,
       writeMetrics);
-    serBuffer = new MyByteArrayOutputStream(DEFAULT_INITIAL_SER_BUFFER_SIZE);
+    serBuffer = new MyByteArrayOutputStream(DEFAULT_INITIAL_SER_BUFFER_SIZE); //指向堆内内存的一个字节数组空间
     serOutputStream = serializer.serializeStream(serBuffer);
   }
 
@@ -258,13 +258,13 @@ public class UnsafeShuffleWriter<K, V> extends ShuffleWriter<K, V> {
     final int partitionId = partitioner.getPartition(key);
     serBuffer.reset();
     serOutputStream.writeKey(key, OBJECT_CLASS_TAG);
-    serOutputStream.writeValue(record._2(), OBJECT_CLASS_TAG);
-    serOutputStream.flush();
+    serOutputStream.writeValue(record._2(), OBJECT_CLASS_TAG); // 先把key和value做序列化写到buffer中去
+    serOutputStream.flush();  // 写入了堆里的字节数组，下面的serBuffer.getBuf()会用到它
 
     final int serializedRecordSize = serBuffer.size();
     assert (serializedRecordSize > 0);
 
-    sorter.insertRecord(
+    sorter.insertRecord( // 往里面插入的是字节数组
       serBuffer.getBuf(), Platform.BYTE_ARRAY_OFFSET, serializedRecordSize, partitionId);
   }
 

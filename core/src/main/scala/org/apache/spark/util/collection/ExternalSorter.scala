@@ -194,7 +194,7 @@ private[spark] class ExternalSorter[K, V, C](
         map.changeValue((getPartition(kv._1), kv._1), update) // 需要聚合用map。传update的时候kv已经闭包进入了update函数体
         maybeSpillCollection(usingMap = true)
       }
-    } else {
+    } else { // 用了buffer主要解决的是BypassMergeSortShuffleWriter因为分区数太多、小文件太多而被绕过的情形
       // Stick values into our buffer
       while (records.hasNext) { // 迭代计算的数据来自HadoopRDD的recordReader或者shuffledRDD的reader，要么是文件，要么是shuffle的结果
         addElementsRead()

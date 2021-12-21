@@ -377,7 +377,7 @@ final class ShuffleExternalSorter extends MemoryConsumer {
   /**
    * Write a record to the shuffle sorter.
    */
-  public void insertRecord(Object recordBase, long recordOffset, int length, int partitionId)
+  public void insertRecord(Object recordBase, long recordOffset, int length, int partitionId) // 字节数组变成了Object
     throws IOException {
 
     // for tests
@@ -388,19 +388,19 @@ final class ShuffleExternalSorter extends MemoryConsumer {
       spill();
     }
 
-    growPointerArrayIfNecessary();
+    growPointerArrayIfNecessary(); // 是否扩容
     // Need 4 bytes to store the record length.
     final int required = length + 4;
-    acquireNewPageIfNecessary(required);
+    acquireNewPageIfNecessary(required); // page在内存、磁盘和数据库里都有这么个概念。从物理地址到晋城的虚拟地址，再到spark管理的page都属于虚拟映射。spark现在就要划分格子了，每个格子最后也要映射到内核管理的分页，字节数组要放入在堆中的这个page
 
     assert(currentPage != null);
     final Object base = currentPage.getBaseObject();
     final long recordAddress = taskMemoryManager.encodePageNumberAndOffset(currentPage, pageCursor); //第二个参数是偏移量
     Platform.putInt(base, pageCursor, length); // Unsafe相同的方法会根据base是否为null，处理方法不一样，null的时候，直接向物理地址填充4个字节。堆内：先new array对象，但不通过array[1] = 2就能用Unsafe调用底层的C代码偷偷改array中的值；堆外：要先allocateMem
     pageCursor += 4;
-    Platform.copyMemory(recordBase, recordOffset, base, pageCursor, length); // 进来的数据存入页，页可能在堆内，也可能在堆外，base为null就往堆外拷贝
+    Platform.copyMemory(recordBase, recordOffset, base, pageCursor, length); // 进来的数据存入页，页可能在堆内，也可能在堆外，base为null就往堆外拷贝。这里的base和pageCursor是目标地址
     pageCursor += length;
-    inMemSorter.insertRecord(recordAddress, partitionId); // 排序排的是索引
+    inMemSorter.insertRecord(recordAddress, partitionId); // recordBase实际上是个字节数组，他没有传进insertRecord，存的是索引，排序排的是索引
   }
 
   /**
