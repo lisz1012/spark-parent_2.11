@@ -280,14 +280,14 @@ public class TaskMemoryManager {
       throw new TooLargePageException(size);
     }
 
-    long acquired = acquireExecutionMemory(size, consumer);
+    long acquired = acquireExecutionMemory(size, consumer); // 这一步只是看看能不能申请出来，还没真正申请
     if (acquired <= 0) {
       return null;
     }
 
-    final int pageNumber;
+    final int pageNumber;   // 一个任务可能申请一个或多个page
     synchronized (this) {
-      pageNumber = allocatedPages.nextClearBit(0); // 用BitSet的位来记录申请到第几页了
+      pageNumber = allocatedPages.nextClearBit(0); // 用BitSet的位来记录申请到第几页了，从给出的偏移量开始往后着false（0）
       if (pageNumber >= PAGE_TABLE_SIZE) {
         releaseExecutionMemory(acquired, consumer);
         throw new IllegalStateException(
@@ -297,7 +297,7 @@ public class TaskMemoryManager {
     }
     MemoryBlock page = null;
     try {
-      page = memoryManager.tungstenMemoryAllocator().allocate(acquired);
+      page = memoryManager.tungstenMemoryAllocator().allocate(acquired);  // 关键！真正开始申请page，两个allocator分支，取决于钨丝计划：是在堆内还是堆外申请page
     } catch (OutOfMemoryError e) {
       logger.warn("Failed to allocate a page ({} bytes), try again.", acquired);
       // there is no enough memory actually, it means the actual free memory is smaller than

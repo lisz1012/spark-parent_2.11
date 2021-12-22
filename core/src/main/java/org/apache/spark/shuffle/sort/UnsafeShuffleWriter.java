@@ -258,7 +258,7 @@ public class UnsafeShuffleWriter<K, V> extends ShuffleWriter<K, V> { // BypassMe
     final int partitionId = partitioner.getPartition(key);
     serBuffer.reset();
     serOutputStream.writeKey(key, OBJECT_CLASS_TAG);
-    serOutputStream.writeValue(record._2(), OBJECT_CLASS_TAG); // 先把key和value做序列化写到buffer中去
+    serOutputStream.writeValue(record._2(), OBJECT_CLASS_TAG); // 先把key和value做序列化为字节数组，写到buffer中去
     serOutputStream.flush();  // 写入了堆里的字节数组，下面的serBuffer.getBuf()会用到它
 
     final int serializedRecordSize = serBuffer.size();

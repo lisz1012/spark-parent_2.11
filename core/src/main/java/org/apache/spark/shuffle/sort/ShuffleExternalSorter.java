@@ -368,8 +368,8 @@ final class ShuffleExternalSorter extends MemoryConsumer {
     if (currentPage == null ||
       pageCursor + required > currentPage.getBaseOffset() + currentPage.size() ) {
       // TODO: try to find space in previous pages
-      currentPage = allocatePage(required);
-      pageCursor = currentPage.getBaseOffset();
+      currentPage = allocatePage(required);     // 触发了钨丝计划，再往里面调用的时候required由int变成了long
+      pageCursor = currentPage.getBaseOffset(); // 返回值是16。LONG_ARRAY_OFFSET = 16。游标就指向long数组对象的第一个元素了
       allocatedPages.add(currentPage);
     }
   }
@@ -390,13 +390,13 @@ final class ShuffleExternalSorter extends MemoryConsumer {
 
     growPointerArrayIfNecessary(); // 是否扩容
     // Need 4 bytes to store the record length.
-    final int required = length + 4;
+    final int required = length + 4; // 这里就有点想自己手写RPC自定义协议了
     acquireNewPageIfNecessary(required); // page在内存、磁盘和数据库里都有这么个概念。从物理地址到晋城的虚拟地址，再到spark管理的page都属于虚拟映射。spark现在就要划分格子了，每个格子最后也要映射到内核管理的分页，字节数组要放入在堆中的这个page
 
     assert(currentPage != null);
-    final Object base = currentPage.getBaseObject();
-    final long recordAddress = taskMemoryManager.encodePageNumberAndOffset(currentPage, pageCursor); //第二个参数是偏移量
-    Platform.putInt(base, pageCursor, length); // Unsafe相同的方法会根据base是否为null，处理方法不一样，null的时候，直接向物理地址填充4个字节。堆内：先new array对象，但不通过array[1] = 2就能用Unsafe调用底层的C代码偷偷改array中的值；堆外：要先allocateMem
+    final Object base = currentPage.getBaseObject(); // long[]
+    final long recordAddress = taskMemoryManager.encodePageNumberAndOffset(currentPage, pageCursor); //第二个参数是偏移量, 上面的acquireNewPageIfNecessary()中计算得到了16。可能放多笔记录，他应该出现在线性空间的哪个位置
+    Platform.putInt(base, pageCursor, length); // 里面不是方法调用，热是直接操作热紧致字节数组浮写4个字节，表示这个长度。 Unsafe相同的方法会根据base是否为null，处理方法不一样，null的时候，直接向物理地址填充4个字节。堆内：先new array对象，但不通过array[1] = 2就能用Unsafe调用底层的C代码偷偷改array中的值；堆外：要先allocateMem
     pageCursor += 4;
     Platform.copyMemory(recordBase, recordOffset, base, pageCursor, length); // 进来的数据存入页，页可能在堆内，也可能在堆外，base为null就往堆外拷贝。这里的base和pageCursor是目标地址
     pageCursor += length;
