@@ -63,7 +63,7 @@ case class ShuffleDataBlockId(shuffleId: Int, mapId: Int, reduceId: Int) extends
 
 @DeveloperApi
 case class ShuffleIndexBlockId(shuffleId: Int, mapId: Int, reduceId: Int) extends BlockId {
-  override def name: String = "shuffle_" + shuffleId + "_" + mapId + "_" + reduceId + ".index"
+  override def name: String = "shuffle_" + shuffleId + "_" + mapId + "_" + reduceId + ".index" // 某个任务是基于这个map的结果的话，就能找到它溢写完的数据
 }
 
 @DeveloperApi

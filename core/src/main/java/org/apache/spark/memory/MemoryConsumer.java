@@ -114,7 +114,7 @@ public abstract class MemoryConsumer {
    * @throws OutOfMemoryError
    */
   protected MemoryBlock allocatePage(long required) {
-    MemoryBlock page = taskMemoryManager.allocatePage(Math.max(pageSize, required), this);
+    MemoryBlock page = taskMemoryManager.allocatePage(Math.max(pageSize, required), this); // pageSize可能是1MB-64MB之间，要计算，在MemoryManager中
     if (page == null || page.size() < required) {
       throwOom(page, required);
     }

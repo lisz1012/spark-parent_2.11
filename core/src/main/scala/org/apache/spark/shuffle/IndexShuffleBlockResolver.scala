@@ -56,7 +56,7 @@ private[spark] class IndexShuffleBlockResolver(
   }
 
   private def getIndexFile(shuffleId: Int, mapId: Int): File = {
-    blockManager.diskBlockManager.getFile(ShuffleIndexBlockId(shuffleId, mapId, NOOP_REDUCE_ID))
+    blockManager.diskBlockManager.getFile(ShuffleIndexBlockId(shuffleId, mapId, NOOP_REDUCE_ID)) // ShuffleIndexBlockId使得未来下游某个任务是基于这个map的结果的话，就能找到它溢写完的数据
   }
 
   /**

@@ -187,7 +187,7 @@ public class UnsafeShuffleWriter<K, V> extends ShuffleWriter<K, V> { // BypassMe
       while (records.hasNext()) {
         insertRecordIntoSorter(records.next());
       }
-      closeAndWriteOutput();
+      closeAndWriteOutput(); // 模仿的是UnsafeShuffleWriter模仿的是MR，生成一个全排序的文件，把所有溢写而成的文件合并起来
       success = true;
     } finally {
       if (sorter != null) {
@@ -230,7 +230,7 @@ public class UnsafeShuffleWriter<K, V> extends ShuffleWriter<K, V> { // BypassMe
     final SpillInfo[] spills = sorter.closeAndGetSpills();
     sorter = null;
     final long[] partitionLengths;
-    final File output = shuffleBlockResolver.getDataFile(shuffleId, mapId);
+    final File output = shuffleBlockResolver.getDataFile(shuffleId, mapId); // 写数据文件
     final File tmp = Utils.tempFileWith(output);
     try {
       try {
@@ -242,13 +242,13 @@ public class UnsafeShuffleWriter<K, V> extends ShuffleWriter<K, V> { // BypassMe
           }
         }
       }
-      shuffleBlockResolver.writeIndexFileAndCommit(shuffleId, mapId, partitionLengths, tmp);
+      shuffleBlockResolver.writeIndexFileAndCommit(shuffleId, mapId, partitionLengths, tmp); // 写索引文件
     } finally {
       if (tmp.exists() && !tmp.delete()) {
         logger.error("Error while deleting temp file {}", tmp.getAbsolutePath());
       }
     }
-    mapStatus = MapStatus$.MODULE$.apply(blockManager.shuffleServerId(), partitionLengths);
+    mapStatus = MapStatus$.MODULE$.apply(blockManager.shuffleServerId(), partitionLengths); // 这个map算子跑的怎么样
   }
 
   @VisibleForTesting

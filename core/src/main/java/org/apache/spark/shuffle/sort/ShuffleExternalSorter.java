@@ -157,7 +157,7 @@ final class ShuffleExternalSorter extends MemoryConsumer {
 
     // This call performs the actual sort.
     final ShuffleInMemorySorter.ShuffleSorterIterator sortedRecords =
-      inMemSorter.getSortedIterator();
+      inMemSorter.getSortedIterator(); // 排的就是索引，看配置，可能会用到基数排序，达到分区有序
 
     // Small writes to DiskBlockObjectWriter will be fairly inefficient. Since there doesn't seem to
     // be an API to directly transfer bytes from managed memory to the disk writer, we buffer
@@ -396,9 +396,9 @@ final class ShuffleExternalSorter extends MemoryConsumer {
     assert(currentPage != null);
     final Object base = currentPage.getBaseObject(); // long[]
     final long recordAddress = taskMemoryManager.encodePageNumberAndOffset(currentPage, pageCursor); //第二个参数是偏移量, 上面的acquireNewPageIfNecessary()中计算得到了16。可能放多笔记录，他应该出现在线性空间的哪个位置
-    Platform.putInt(base, pageCursor, length); // 里面不是方法调用，热是直接操作热紧致字节数组浮写4个字节，表示这个长度。 Unsafe相同的方法会根据base是否为null，处理方法不一样，null的时候，直接向物理地址填充4个字节。堆内：先new array对象，但不通过array[1] = 2就能用Unsafe调用底层的C代码偷偷改array中的值；堆外：要先allocateMem
+    Platform.putInt(base, pageCursor, length); // 里面不是方法调用，热是直接操作热紧致字节数组浮写4个字节，表示这个长度。 Unsafe相同的方法会根据base是否为null，处理方法不一样，null的时候，直接向pageCursor所指向的物理地址填充4个字节。堆内：先new array对象，但不通过array[1] = 2就能用Unsafe调用底层的C代码偷偷改array中的值；堆外：要先allocateMem
     pageCursor += 4;
-    Platform.copyMemory(recordBase, recordOffset, base, pageCursor, length); // 进来的数据存入页，页可能在堆内，也可能在堆外，base为null就往堆外拷贝。这里的base和pageCursor是目标地址
+    Platform.copyMemory(recordBase, recordOffset, base, pageCursor, length); // 进来的数据存入页，页可能在堆内，也可能在堆外，base为null就往堆外拷贝。这里的base和pageCursor是目标地址。还是用了base是否为null这个开关
     pageCursor += length;
     inMemSorter.insertRecord(recordAddress, partitionId); // recordBase实际上是个字节数组（地址），他没有传进insertRecord，存的是索引，排序排的是索引。接收一个分区号是为了相同分区的排在一起，分区号是int，4个字节。堆里开辟了索引，指向堆里（外）的一个位置
   }

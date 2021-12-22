@@ -48,7 +48,7 @@ final class ShuffleInMemorySorter {
    * Only part of the array will be used to store the pointers, the rest part is preserved as
    * temporary buffer for sorting.
    */
-  private LongArray array;
+  private LongArray array;  //索引，排序的时候只是排他。跟他所索引的数据一样，有可能在堆内或堆外
 
   /**
    * Whether to use radix sort for sorting in-memory partition ids. Radix sort is much faster
@@ -73,7 +73,7 @@ final class ShuffleInMemorySorter {
     assert (initialSize > 0);
     this.initialSize = initialSize;
     this.useRadixSort = useRadixSort;
-    this.array = consumer.allocateArray(initialSize);
+    this.array = consumer.allocateArray(initialSize);  // array是索引，排序的时候只是排他
     this.usableCapacity = getUsableCapacity();
   }
 
