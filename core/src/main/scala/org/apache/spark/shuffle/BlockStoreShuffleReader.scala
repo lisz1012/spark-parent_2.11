@@ -41,12 +41,12 @@ private[spark] class BlockStoreShuffleReader[K, C](
   private val dep = handle.dependency
 
   /** Read the combined key-values for this reduce task */
-  override def read(): Iterator[Product2[K, C]] = {
-    val wrappedStreams = new ShuffleBlockFetcherIterator(
+  override def read(): Iterator[Product2[K, C]] = { // 两大步：1。流是怎么找到的 2。怎么组建了不同的迭代器供任务执行。这里并没有计算发生
+    val wrappedStreams = new ShuffleBlockFetcherIterator(//牵扯到块的拉取的过程，这个stream是个Iterator
       context,
-      blockManager.shuffleClient,
+      blockManager.shuffleClient, // Netty的传输服务
       blockManager,
-      mapOutputTracker.getMapSizesByExecutorId(handle.shuffleId, startPartition, endPartition),
+      mapOutputTracker.getMapSizesByExecutorId(handle.shuffleId, startPartition, endPartition), // 上游的输出会向mapOutputTracker里面更新mapStatus，下游会通过他去寻找。上游有多少个分区？每个分区多少个块是可以取出来的
       serializerManager.wrapStream,
       // Note: we use getSizeAsMb when no suffix is provided for backwards compatibility
       SparkEnv.get.conf.getSizeAsMb("spark.reducer.maxSizeInFlight", "48m") * 1024 * 1024,

@@ -115,7 +115,7 @@ private[spark] class SortShuffleManager(conf: SparkConf) extends ShuffleManager 
       startPartition: Int,
       endPartition: Int,
       context: TaskContext): ShuffleReader[K, C] = {
-    new BlockStoreShuffleReader(
+    new BlockStoreShuffleReader( // 跟writer端不同，并没有拿着handler去匹配什么，二是固定的new一个BlockStoreShuffleReader
       handle.asInstanceOf[BaseShuffleHandle[K, _, C]], startPartition, endPartition, context)
   }
 

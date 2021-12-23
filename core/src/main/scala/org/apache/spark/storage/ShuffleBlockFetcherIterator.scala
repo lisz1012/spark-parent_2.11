@@ -63,7 +63,7 @@ final class ShuffleBlockFetcherIterator(
     context: TaskContext,
     shuffleClient: ShuffleClient,
     blockManager: BlockManager,
-    blocksByAddress: Seq[(BlockManagerId, Seq[(BlockId, Long)])],
+    blocksByAddress: Seq[(BlockManagerId, Seq[(BlockId, Long)])], // 哪些机器上有哪些输出的块
     streamWrapper: (BlockId, InputStream) => InputStream,
     maxBytesInFlight: Long,
     maxReqsInFlight: Int,
@@ -151,7 +151,7 @@ final class ShuffleBlockFetcherIterator(
   @GuardedBy("this")
   private[this] val shuffleFilesSet = mutable.HashSet[DownloadFile]()
 
-  initialize()
+  initialize() // 远程数据拉取过来以备使用：区分远端和本地快
 
   // Decrements the buffer reference count.
   // The currentResult is set to null to prevent releasing the buffer again on cleanup()
@@ -274,19 +274,19 @@ final class ShuffleBlockFetcherIterator(
 
     // Tracks total number of blocks (including zero sized blocks)
     var totalBlocks = 0
-    for ((address, blockInfos) <- blocksByAddress) {
+    for ((address, blockInfos) <- blocksByAddress) { // 一个集群里面有很多Executor，每个Executor又有一批Blocks
       totalBlocks += blockInfos.size
-      if (address.executorId == blockManager.blockManagerId.executorId) {
+      if (address.executorId == blockManager.blockManagerId.executorId) { // 本地的输出，local块的登记
         // Filter out zero-sized blocks
         localBlocks ++= blockInfos.filter(_._2 != 0).map(_._1)
         numBlocksToFetch += localBlocks.size
-      } else {
+      } else { // 远程
         val iterator = blockInfos.iterator
         var curRequestSize = 0L
         var curBlocks = new ArrayBuffer[(BlockId, Long)]
         while (iterator.hasNext) {
           val (blockId, size) = iterator.next()
-          // Skip empty blocks
+          // Skip empty blocks。一个Task的数据可能都被上游过滤掉了
           if (size > 0) {
             curBlocks += ((blockId, size))
             remoteBlocks += blockId
@@ -295,10 +295,10 @@ final class ShuffleBlockFetcherIterator(
           } else if (size < 0) {
             throw new BlockException(blockId, "Negative block size " + size)
           }
-          if (curRequestSize >= targetRequestSize ||
+          if (curRequestSize >= targetRequestSize ||   // 超过1/5* 48M就换一台源机器去拉取数据。下游并不知道上游是否只对他一个人发送数据，可能轮训发送数据包，这样还不如下游也对上游的数据节点交替拉取。细节。多个block也可以在一个请求里被拉取回来
               curBlocks.size >= maxBlocksInFlightPerAddress) {
             // Add this FetchRequest
-            remoteRequests += new FetchRequest(address, curBlocks)
+            remoteRequests += new FetchRequest(address, curBlocks) // 面向一个远程Executor的blockInfo，拿出了一部分放到了curBlocks里面
             logDebug(s"Creating fetch request of $curRequestSize at $address "
               + s"with ${curBlocks.size} blocks")
             curBlocks = new ArrayBuffer[(BlockId, Long)]
@@ -349,19 +349,19 @@ final class ShuffleBlockFetcherIterator(
     // Split local and remote blocks.
     val remoteRequests = splitLocalRemoteBlocks()
     // Add the remote requests into our queue in a random order
-    fetchRequests ++= Utils.randomize(remoteRequests)
+    fetchRequests ++= Utils.randomize(remoteRequests) // 洗牌，打散，尽量去不同的节点拉取数据
     assert ((0 == reqsInFlight) == (0 == bytesInFlight),
       "expected reqsInFlight = 0 but found reqsInFlight = " + reqsInFlight +
       ", expected bytesInFlight = 0 but found bytesInFlight = " + bytesInFlight)
 
     // Send out initial requests for blocks, up to our maxBytesInFlight
-    fetchUpToMaxBytes()
+    fetchUpToMaxBytes() // 拉取远程的blocks
 
     val numFetches = remoteRequests.size - fetchRequests.size
     logInfo("Started " + numFetches + " remote fetches in" + Utils.getUsedTimeMs(startTime))
 
     // Get Local Blocks
-    fetchLocalBlocks()
+    fetchLocalBlocks() // 把远端的和本地的整合成local blocks，以备使用。往results这个LinkedBlockingQueue里面put结果，在next()中会被拿出来
     logDebug("Got local blocks in " + Utils.getUsedTimeMs(startTime))
   }
 
@@ -495,7 +495,7 @@ final class ShuffleBlockFetcherIterator(
         logDebug(s"Deferring fetch request for $remoteAddress with ${request.blocks.size} blocks")
         val defReqQueue = deferredFetchRequests.getOrElse(remoteAddress, new Queue[FetchRequest]())
         defReqQueue.enqueue(request)
-        deferredFetchRequests(remoteAddress) = defReqQueue
+        deferredFetchRequests(remoteAddress) = defReqQueue // 别人如果在拉取，可能要等待一下
       } else {
         send(remoteAddress, request)
       }

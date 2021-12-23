@@ -112,7 +112,7 @@ private[spark] class NettyBlockTransferService(
         override def createAndStart(blockIds: Array[String], listener: BlockFetchingListener) {
           val client = clientFactory.createClient(host, port)
           new OneForOneBlockFetcher(client, appId, execId, blockIds, listener,
-            transportConf, tempFileManager).start()
+            transportConf, tempFileManager).start() // 干活的代码跑起来了
         }
       }
 
