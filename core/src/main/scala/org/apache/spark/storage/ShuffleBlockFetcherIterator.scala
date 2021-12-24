@@ -355,7 +355,7 @@ final class ShuffleBlockFetcherIterator(
       ", expected bytesInFlight = 0 but found bytesInFlight = " + bytesInFlight)
 
     // Send out initial requests for blocks, up to our maxBytesInFlight
-    fetchUpToMaxBytes() // 拉取远程的blocks
+    fetchUpToMaxBytes() // 拉取远程的blocks 基于Netty的传输
 
     val numFetches = remoteRequests.size - fetchRequests.size
     logInfo("Started " + numFetches + " remote fetches in" + Utils.getUsedTimeMs(startTime))

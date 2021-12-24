@@ -110,9 +110,9 @@ private[spark] class NettyBlockTransferService(
     try {
       val blockFetchStarter = new RetryingBlockFetcher.BlockFetchStarter {
         override def createAndStart(blockIds: Array[String], listener: BlockFetchingListener) {
-          val client = clientFactory.createClient(host, port)
+          val client = clientFactory.createClient(host, port) // OpenBlock message接收端的host和port
           new OneForOneBlockFetcher(client, appId, execId, blockIds, listener,
-            transportConf, tempFileManager).start() // 干活的代码跑起来了
+            transportConf, tempFileManager).start() // 干活的代码跑起来了，会拉取数据
         }
       }
 
