@@ -503,7 +503,7 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
     val mergeValue = (buf: CompactBuffer[V], v: V) => buf += v
     val mergeCombiners = (c1: CompactBuffer[V], c2: CompactBuffer[V]) => c1 ++= c2
     val bufs = combineByKeyWithClassTag[CompactBuffer[V]](
-      createCombiner, mergeValue, mergeCombiners, partitioner, mapSideCombine = false) // map端不聚合
+      createCombiner, mergeValue, mergeCombiners, partitioner, mapSideCombine = false) // groupByKey在map端不聚合，Spark帮忙优化了
     bufs.asInstanceOf[RDD[(K, Iterable[V])]]
   }
 

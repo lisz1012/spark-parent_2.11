@@ -69,7 +69,7 @@ private[spark] class BlockStoreShuffleReader[K, C](
     val readMetrics = context.taskMetrics.createTempShuffleReadMetrics()
     val metricIter = CompletionIterator[(Any, Any), Iterator[(Any, Any)]](
       recordIter.map { record =>
-        readMetrics.incRecordsRead(1)
+        readMetrics.incRecordsRead(1) // record怎么进来就怎么出去，但是要对读取数量加1
         record
       },
       context.taskMetrics().mergeShuffleReadMetrics())
@@ -108,7 +108,7 @@ private[spark] class BlockStoreShuffleReader[K, C](
         context.addTaskCompletionListener(_ => {
           sorter.stop()
         })
-        CompletionIterator[Product2[K, C], Iterator[Product2[K, C]]](sorter.iterator, sorter.stop())
+        CompletionIterator[Product2[K, C], Iterator[Product2[K, C]]](sorter.iterator, sorter.stop()) // 带排序的迭代器
       case None =>
         aggregatedIter
     }
