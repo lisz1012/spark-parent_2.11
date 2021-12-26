@@ -72,7 +72,7 @@ private[spark] abstract class RDDCheckpointData[T: ClassTag](@transient private 
       }
     }
 
-    val newRDD = doCheckpoint()
+    val newRDD = doCheckpoint() // 一般情况下看ReliableRDDCheckpointData
 
     // Update our state and truncate the RDD lineage
     RDDCheckpointData.synchronized {

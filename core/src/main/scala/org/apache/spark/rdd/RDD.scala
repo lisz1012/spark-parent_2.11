@@ -329,10 +329,10 @@ abstract class RDD[T: ClassTag](
    * Gets or computes an RDD partition. Used by RDD.iterator() when an RDD is cached.
    */
   private[spark] def getOrCompute(partition: Partition, context: TaskContext): Iterator[T] = {
-    val blockId = RDDBlockId(id, partition.index)
+    val blockId = RDDBlockId(id, partition.index) // id是RDD自己的编号。blockId = 几号、几区
     var readCachedBlock = true
     // This method is called on executors, so we need call SparkEnv.get instead of sc.env.
-    SparkEnv.get.blockManager.getOrElseUpdate(blockId, storageLevel, elementClassTag, () => {
+    SparkEnv.get.blockManager.getOrElseUpdate(blockId, storageLevel, elementClassTag, () => { // iterator先从BlockManager中去取persist过的数据，去不到的话再动用这个函数读取checkpoint
       readCachedBlock = false
       computeOrReadCheckpoint(partition, context)
     }) match {
@@ -1553,7 +1553,7 @@ abstract class RDD[T: ClassTag](
     if (context.checkpointDir.isEmpty) {
       throw new SparkException("Checkpoint directory has not been set in the SparkContext")
     } else if (checkpointData.isEmpty) {
-      checkpointData = Some(new ReliableRDDCheckpointData(this))
+      checkpointData = Some(new ReliableRDDCheckpointData(this)) // 这里只是new了一个对象，使得checkpointData非空
     }
   }
 
@@ -1739,7 +1739,7 @@ abstract class RDD[T: ClassTag](
     RDDOperationScope.withScope(sc, "checkpoint", allowNesting = false, ignoreParent = true) {
       if (!doCheckpointCalled) {
         doCheckpointCalled = true
-        if (checkpointData.isDefined) {
+        if (checkpointData.isDefined) { // checkpoint()执行的时候使得checkpointData非空
           if (checkpointAllMarkedAncestors) {
             // TODO We can collect all the RDDs that needs to be checkpointed, and then checkpoint
             // them in parallel.

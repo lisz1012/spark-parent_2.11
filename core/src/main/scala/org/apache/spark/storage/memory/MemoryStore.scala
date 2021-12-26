@@ -213,7 +213,7 @@ private[spark] class MemoryStore(
     }
 
     // Unroll this block safely, checking whether we have exceeded our threshold periodically
-    while (values.hasNext && keepUnrolling) {
+    while (values.hasNext && keepUnrolling) { // 用起了迭代器截获前面的数据放到内存里，数据流动了
       vector += values.next()
       if (elementsUnrolled % memoryCheckPeriod == 0) {
         // If our vector's size has exceeded the threshold, request more memory
@@ -616,7 +616,7 @@ private[spark] class MemoryStore(
       memory: Long,
       memoryMode: MemoryMode): Boolean = {
     memoryManager.synchronized {
-      val success = memoryManager.acquireUnrollMemory(blockId, memory, memoryMode)
+      val success = memoryManager.acquireUnrollMemory(blockId, memory, memoryMode) // 申请内存空间来放置数据，缓存. 看UnifiedMemoryManager
       if (success) {
         val taskAttemptId = currentTaskAttemptId()
         val unrollMemoryMap = memoryMode match {

@@ -136,8 +136,8 @@ private[spark] object ReliableCheckpointRDD extends Logging {
     // Save to file, and reload it as an RDD
     val broadcastedConf = sc.broadcast(
       new SerializableConfiguration(sc.hadoopConfiguration))
-    // TODO: This is expensive because it computes the RDD again unnecessarily (SPARK-8582)
-    sc.runJob(originalRDD,
+    // TODO: This is expensive because it computes the RDD again unnecessarily (SPARK-8582)  -> 其实也没有那么贵，因为一般checkpoint之前都有persist或者cache（优化），则并不会一直往前面倒着遍历上游的RDD
+    sc.runJob(originalRDD, // 把有执行过checkpoint()的（checkpointData isDefined = true）RDD作为参数，要前面的数据，并写到指定的持久化目录。这就是为什么checkpoint会触发（生成）一个job。
       writePartitionToCheckpointFile[T](checkpointDirPath.toString, broadcastedConf) _)
 
     if (originalRDD.partitioner.nonEmpty) {
@@ -193,7 +193,7 @@ private[spark] object ReliableCheckpointRDD extends Logging {
     val serializer = env.serializer.newInstance()
     val serializeStream = serializer.serializeStream(fileOutputStream)
     Utils.tryWithSafeFinally {
-      serializeStream.writeAll(iterator)
+      serializeStream.writeAll(iterator) // 拿到上游数据立刻往磁盘里面写
     } {
       serializeStream.close()
     }

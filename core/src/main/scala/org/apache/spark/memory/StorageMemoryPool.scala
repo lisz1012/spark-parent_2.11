@@ -96,7 +96,7 @@ private[memory] class StorageMemoryPool(
     // should have been updated.
     val enoughMemory = numBytesToAcquire <= memoryFree
     if (enoughMemory) {
-      _memoryUsed += numBytesToAcquire
+      _memoryUsed += numBytesToAcquire // 只是登记内存消耗
     }
     enoughMemory
   }

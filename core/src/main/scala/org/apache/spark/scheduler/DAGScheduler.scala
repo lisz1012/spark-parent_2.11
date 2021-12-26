@@ -983,7 +983,7 @@ class DAGScheduler(
     val taskIdToLocations: Map[Int, Seq[TaskLocation]] = try { // 任务是作用在每一个分区上的
       stage match {
         case s: ShuffleMapStage =>
-          partitionsToCompute.map { id => (id, getPreferredLocs(stage.rdd, id))}.toMap
+          partitionsToCompute.map { id => (id, getPreferredLocs(stage.rdd, id))}.toMap // getPreferredLocs(stage.rdd, id)并没有被计算，只是一函数的形式封装成了一个Tuple2。只有前面的stage被执行完才知道有没有做过cache，而在Driver端推出去之前还不知道
         case s: ResultStage =>
           partitionsToCompute.map { id =>
             val p = s.partitions(id)
@@ -1036,7 +1036,7 @@ class DAGScheduler(
         partitions = stage.rdd.partitions
       }
 
-      taskBinary = sc.broadcast(taskBinaryBytes) // 一旦Driver的sparkContext调用了broadcast存储层，其他的Executor也可以取到这些逻辑代码。MapReduce中是通过反射的方式得到Mapper和Reducer的对象，但是spark中是通过序列化反序列化拿到业务逻辑的
+      taskBinary = sc.broadcast(taskBinaryBytes) // 一旦Driver的sparkContext调用了broadcast存储层，其他的Executor也可以取到这些逻辑代码。MapReduce中是通过反射的方式得到Mapper和Reducer的对象，但是spark中是通过序列化反序列化拿到业务逻辑的。RDD、dependency等要序列化成字节数组，然后被广播出去
     } catch {
       // In the case of a failure during serialization, abort the stage.
       case e: NotSerializableException =>
@@ -1063,7 +1063,7 @@ class DAGScheduler(
             val part = partitions(id)        // 取出分区
             stage.pendingPartitions += id
             new ShuffleMapTask(stage.id, stage.latestInfo.attemptNumber,
-              taskBinary, part, locs, properties, serializedTaskMetrics, Option(jobId),
+              taskBinary, part, locs, properties, serializedTaskMetrics, Option(jobId), // 从taskBinary里拿到了本地的BlockManager，本地没有要取一次。面向一个Stage会产生一个taskBinary和taskBinaryBytes，根据分区partitionsToCompute的数量会产生task，每个task引用广播变量的对象。多个task组建成一个TaskSet
               Option(sc.applicationId), sc.applicationAttemptId)
           }
 

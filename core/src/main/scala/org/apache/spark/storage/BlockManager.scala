@@ -528,8 +528,8 @@ private[spark] class BlockManager(
         val level = info.level
         logDebug(s"Level for block $blockId is $level")
         val taskAttemptId = Option(TaskContext.get()).map(_.taskAttemptId())
-        if (level.useMemory && memoryStore.contains(blockId)) {
-          val iter: Iterator[Any] = if (level.deserialized) {
+        if (level.useMemory && memoryStore.contains(blockId)) { // 优先检查内存
+          val iter: Iterator[Any] = if (level.deserialized) { // 内存里还分为有没有序列化两种情况
             memoryStore.getValues(blockId).get
           } else {
             serializerManager.dataDeserializeStream(
@@ -542,7 +542,7 @@ private[spark] class BlockManager(
             releaseLock(blockId, taskAttemptId)
           })
           Some(new BlockResult(ci, DataReadMethod.Memory, info.size))
-        } else if (level.useDisk && diskStore.contains(blockId)) {
+        } else if (level.useDisk && diskStore.contains(blockId)) { // 没使用内存则去磁盘取
           val diskData = diskStore.getBytes(blockId)
           val iterToReturn: Iterator[Any] = {
             if (level.deserialized) {
@@ -740,7 +740,7 @@ private[spark] class BlockManager(
    * any locks if the block was fetched from a remote block manager. The read lock will
    * automatically be freed once the result's `data` iterator is fully consumed.
    */
-  def get[T: ClassTag](blockId: BlockId): Option[BlockResult] = {
+  def get[T: ClassTag](blockId: BlockId): Option[BlockResult] = { // 上一个RDD有可能把数据放在了本地或者远程
     val local = getLocalValues(blockId)
     if (local.isDefined) {
       logInfo(s"Found block $blockId locally")
@@ -804,7 +804,7 @@ private[spark] class BlockManager(
     get[T](blockId)(classTag) match {
       case Some(block) =>
         return Left(block)
-      case _ =>
+      case _ => // 第一次取不到，这段代码直接放空
         // Need to compute the block.
     }
     // Initially we hold no locks on this block.
@@ -995,7 +995,7 @@ private[spark] class BlockManager(
       level: StorageLevel,
       classTag: ClassTag[_],
       tellMaster: Boolean,
-      keepReadLock: Boolean)(putBody: BlockInfo => Option[T]): Option[T] = {
+      keepReadLock: Boolean)(putBody: BlockInfo => Option[T]): Option[T] = { // 柯里化
 
     require(blockId != null, "BlockId is null")
     require(level != null && level.isValid, "StorageLevel is null or invalid")
@@ -1017,7 +1017,7 @@ private[spark] class BlockManager(
     val startTimeMs = System.currentTimeMillis
     var exceptionWasThrown: Boolean = true
     val result: Option[T] = try {
-      val res = putBody(putBlockInfo)
+      val res = putBody(putBlockInfo) // 传进来的函数被执行了
       exceptionWasThrown = false
       if (res.isEmpty) {
         // the block was successfully stored
@@ -1077,12 +1077,12 @@ private[spark] class BlockManager(
    */
   private def doPutIterator[T](
       blockId: BlockId,
-      iterator: () => Iterator[T],
+      iterator: () => Iterator[T], // 这个iterator可以调用前面的那个RDD的compute
       level: StorageLevel,
       classTag: ClassTag[T],
       tellMaster: Boolean = true,
       keepReadLock: Boolean = false): Option[PartiallyUnrolledIterator[T]] = {
-    doPut(blockId, level, classTag, tellMaster = tellMaster, keepReadLock = keepReadLock) { info =>
+    doPut(blockId, level, classTag, tellMaster = tellMaster, keepReadLock = keepReadLock) { info => // 柯里化的调用，大括号里是第二个参数，只有第二个参数里面用到了iterator
       val startTimeMs = System.currentTimeMillis
       var iteratorFromFailedMemoryStorePut: Option[PartiallyUnrolledIterator[T]] = None
       // Size of the block in bytes
@@ -1090,7 +1090,7 @@ private[spark] class BlockManager(
       if (level.useMemory) {
         // Put it in memory first, even if it also has useDisk set to true;
         // We will drop it to disk later if the memory store can't hold it.
-        if (level.deserialized) {
+        if (level.deserialized) { // 没有序列化，直接放对象，然后返回iterator，以便任务的后半部分使用
           memoryStore.putIteratorAsValues(blockId, iterator(), classTag) match {
             case Right(s) =>
               size = s
@@ -1107,7 +1107,7 @@ private[spark] class BlockManager(
                 iteratorFromFailedMemoryStorePut = Some(iter)
               }
           }
-        } else { // !level.deserialized
+        } else { // !level.deserialized 被序列化了，那就放序列化完的结果，然后返回iterator，以便任务的后半部分使用
           memoryStore.putIteratorAsBytes(blockId, iterator(), classTag, level.memoryMode) match {
             case Right(s) =>
               size = s
@@ -1129,7 +1129,7 @@ private[spark] class BlockManager(
       } else if (level.useDisk) {
         diskStore.put(blockId) { channel =>
           val out = Channels.newOutputStream(channel)
-          serializerManager.dataSerializeStream(blockId, out, iterator())(classTag)
+          serializerManager.dataSerializeStream(blockId, out, iterator())(classTag) // 还是会用到迭代器，next取完了接着写入磁盘
         }
         size = diskStore.getSize(blockId)
       }
