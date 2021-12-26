@@ -177,7 +177,7 @@ private[spark] class TaskSchedulerImpl(
     waitBackendReady()
   }
 
-  override def submitTasks(taskSet: TaskSet) {
+  override def submitTasks(taskSet: TaskSet) { // 二次资源调度，哪些Task分配到哪些计算节点
     val tasks = taskSet.tasks
     logInfo("Adding task set " + taskSet.id + " with " + tasks.length + " tasks")
     this.synchronized {

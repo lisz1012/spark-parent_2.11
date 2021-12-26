@@ -245,7 +245,7 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
           case (id, executorData) =>
             new WorkerOffer(id, executorData.executorHost, executorData.freeCores)
         }.toIndexedSeq
-        scheduler.resourceOffers(workOffers) // 移动到哪个有资源的活跃的Executor里面去
+        scheduler.resourceOffers(workOffers) // 移动到哪个有资源的活跃的Executor里面去，task和Executor的绑定的过程，后面再说
       }
       if (!taskDescs.isEmpty) {
         launchTasks(taskDescs)
