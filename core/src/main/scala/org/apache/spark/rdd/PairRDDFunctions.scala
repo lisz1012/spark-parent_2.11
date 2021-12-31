@@ -88,7 +88,7 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
       self.context.clean(createCombiner),
       self.context.clean(mergeValue),
       self.context.clean(mergeCombiners))
-    if (self.partitioner == Some(partitioner)) {
+    if (self.partitioner == Some(partitioner)) { // 如果跟上游的分区器相同，则是窄依赖
       self.mapPartitions(iter => {
         val context = TaskContext.get()
         new InterruptibleIterator(context, aggregator.combineValuesByKey(iter, context))
