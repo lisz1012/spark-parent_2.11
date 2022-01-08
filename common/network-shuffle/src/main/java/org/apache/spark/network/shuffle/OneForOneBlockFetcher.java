@@ -76,7 +76,7 @@ public class OneForOneBlockFetcher {
       TransportConf transportConf,
       DownloadFileManager downloadFileManager) {
     this.client = client;
-    this.openMessage = new OpenBlocks(appId, execId, blockIds);
+    this.openMessage = new OpenBlocks(appId, execId, blockIds); // 里面用了Netty的ByteBuffer
     this.blockIds = blockIds;
     this.listener = listener;
     this.chunkCallback = new ChunkCallback();
@@ -105,12 +105,12 @@ public class OneForOneBlockFetcher {
    * The given message will be serialized with the Java serializer, and the RPC must return a
    * {@link StreamHandle}. We will send all fetch requests immediately, without throttling.
    */
-  public void start() {
+  public void start() { // 干活
     if (blockIds.length == 0) {
       throw new IllegalArgumentException("Zero-sized blockIds array");
     }
 
-    client.sendRpc(openMessage.toByteBuffer(), new RpcResponseCallback() {
+    client.sendRpc(openMessage.toByteBuffer(), new RpcResponseCallback() { // openMessage 是一个载体、一个消息，要从一端发给另一端，序列化时用到了Netty的ByteBuffer
       @Override
       public void onSuccess(ByteBuffer response) {
         try {
@@ -124,7 +124,7 @@ public class OneForOneBlockFetcher {
               client.stream(OneForOneStreamManager.genStreamChunkId(streamHandle.streamId, i),
                 new DownloadCallback(i));
             } else {
-              client.fetchChunk(streamHandle.streamId, i, chunkCallback);
+              client.fetchChunk(streamHandle.streamId, i, chunkCallback); // 这里面有个listener
             }
           }
         } catch (Exception e) {

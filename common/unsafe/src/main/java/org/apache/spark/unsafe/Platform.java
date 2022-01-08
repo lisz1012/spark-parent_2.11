@@ -227,7 +227,7 @@ public final class Platform {
 
   static {
     sun.misc.Unsafe unsafe;
-    try {
+    try { // 操作Unsafe的通用写法
       Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
       unsafeField.setAccessible(true);
       unsafe = (sun.misc.Unsafe) unsafeField.get(null);
@@ -241,7 +241,7 @@ public final class Platform {
       BYTE_ARRAY_OFFSET = _UNSAFE.arrayBaseOffset(byte[].class);
       SHORT_ARRAY_OFFSET = _UNSAFE.arrayBaseOffset(short[].class);
       INT_ARRAY_OFFSET = _UNSAFE.arrayBaseOffset(int[].class);
-      LONG_ARRAY_OFFSET = _UNSAFE.arrayBaseOffset(long[].class); // returns the offset of the first element based on the beginning to the array object
+      LONG_ARRAY_OFFSET = _UNSAFE.arrayBaseOffset(long[].class); // returns the offset of the first element based on the beginning to the array object， 16
       FLOAT_ARRAY_OFFSET = _UNSAFE.arrayBaseOffset(float[].class);
       DOUBLE_ARRAY_OFFSET = _UNSAFE.arrayBaseOffset(double[].class);
     } else {

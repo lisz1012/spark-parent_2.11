@@ -52,7 +52,7 @@ public class HeapMemoryAllocator implements MemoryAllocator {
         if (pool != null) {
           while (!pool.isEmpty()) {
             final WeakReference<long[]> arrayReference = pool.pop();
-            final long[] array = arrayReference.get();
+            final long[] array = arrayReference.get(); // 堆上分配，只需要开辟一个数组就可以了
             if (array != null) {
               assert (array.length * 8L >= size);
               MemoryBlock memory = new MemoryBlock(array, Platform.LONG_ARRAY_OFFSET, size);
@@ -66,7 +66,7 @@ public class HeapMemoryAllocator implements MemoryAllocator {
         }
       }
     }
-    long[] array = new long[(int) ((size + 7) / 8)]; // capacity is at least 1
+    long[] array = new long[(int) ((size + 7) / 8)]; // capacity is at least 1。 堆上分配，只需要开辟一个数组就可以了
     MemoryBlock memory = new MemoryBlock(array, Platform.LONG_ARRAY_OFFSET, size); // LONG_ARRAY_OFFSET = 16
     if (MemoryAllocator.MEMORY_DEBUG_FILL_ENABLED) {
       memory.fill(MemoryAllocator.MEMORY_DEBUG_FILL_CLEAN_VALUE);

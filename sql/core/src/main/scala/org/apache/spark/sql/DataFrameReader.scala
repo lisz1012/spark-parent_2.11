@@ -188,7 +188,7 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
     }
 
     val cls = DataSource.lookupDataSource(source, sparkSession.sessionState.conf)
-    if (classOf[DataSourceV2].isAssignableFrom(cls)) {
+    if (classOf[DataSourceV2].isAssignableFrom(cls)) { // V2会跟流挂钩
       val ds = cls.newInstance()
       val sessionOptions = DataSourceV2Utils.extractSessionConfigs(
         ds = ds.asInstanceOf[DataSourceV2],
@@ -224,7 +224,7 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
         Dataset.ofRows(sparkSession, DataSourceV2Relation(reader))
       }
     } else {
-      loadV1Source(paths: _*)
+      loadV1Source(paths: _*) // Spark SQL 先看V1这个分支
     }
   }
 
@@ -690,7 +690,7 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
    * @since 1.6.0
    */
   @scala.annotation.varargs
-  def text(paths: String*): DataFrame = format("text").load(paths : _*)
+  def text(paths: String*): DataFrame = format("text").load(paths : _*) // Spark SQL可以读取很多类型：纯文本、csv、json、parquet等
 
   /**
    * Loads text files and returns a [[Dataset]] of String. See the documentation on the

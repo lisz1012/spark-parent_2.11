@@ -953,7 +953,7 @@ object SparkSession extends Logging {
           }
         }
 
-        session = new SparkSession(sparkContext, None, None, extensions)
+        session = new SparkSession(sparkContext, None, None, extensions) // SparkSession是SparkContext的包装
         options.foreach { case (k, v) => session.initialSessionOptions.put(k, v) }
         setDefaultSession(session)
         setActiveSession(session)
@@ -1047,8 +1047,8 @@ object SparkSession extends Logging {
 
   private def sessionStateClassName(conf: SparkConf): String = {
     conf.get(CATALOG_IMPLEMENTATION) match {
-      case "hive" => HIVE_SESSION_STATE_BUILDER_CLASS_NAME
-      case "in-memory" => classOf[SessionStateBuilder].getCanonicalName
+      case "hive" => HIVE_SESSION_STATE_BUILDER_CLASS_NAME              // spark on hive
+      case "in-memory" => classOf[SessionStateBuilder].getCanonicalName // 运行之后只创建一个视图
     }
   }
 

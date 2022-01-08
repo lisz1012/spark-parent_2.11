@@ -141,7 +141,7 @@ public class TransportClient implements Closeable {
     StreamChunkId streamChunkId = new StreamChunkId(streamId, chunkIndex);
     handler.addFetchRequest(streamChunkId, callback);
 
-    channel.writeAndFlush(new ChunkFetchRequest(streamChunkId)).addListener(future -> {
+    channel.writeAndFlush(new ChunkFetchRequest(streamChunkId)).addListener(future -> { // 拉取数据
       if (future.isSuccess()) {
         long timeTaken = System.currentTimeMillis() - startTime;
         if (logger.isTraceEnabled()) {
