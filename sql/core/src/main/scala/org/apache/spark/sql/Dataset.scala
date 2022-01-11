@@ -70,9 +70,9 @@ private[sql] object Dataset {
   }
 
   def ofRows(sparkSession: SparkSession, logicalPlan: LogicalPlan): DataFrame = {
-    val qe = sparkSession.sessionState.executePlan(logicalPlan)
+    val qe = sparkSession.sessionState.executePlan(logicalPlan) // 懒惰的小伙伴们不会被执行
     qe.assertAnalyzed()
-    new Dataset[Row](sparkSession, qe, RowEncoder(qe.analyzed.schema))
+    new Dataset[Row](sparkSession, qe, RowEncoder(qe.analyzed.schema)) // Dataset需要一个QuerExecution，QE需要一个logicalPlan
   }
 }
 
@@ -1466,7 +1466,7 @@ class Dataset[T] private[sql](
    * @group typedrel
    * @since 1.6.0
    */
-  def filter(condition: Column): Dataset[T] = withTypedPlan {
+  def filter(condition: Column): Dataset[T] = withTypedPlan { // filter的方法体是指向了另外的一个方法： withTypedPlan,Filter会作为参数传给withTypedPlan，这里的大括号可以写成小括号。Filter是一个样例类
     Filter(condition.expr, planWithBarrier)
   }
 
@@ -1494,7 +1494,7 @@ class Dataset[T] private[sql](
    * @group typedrel
    * @since 1.6.0
    */
-  def where(condition: Column): Dataset[T] = filter(condition)
+  def where(condition: Column): Dataset[T] = filter(condition) // where 只是个集合操作filter的包装
 
   /**
    * Filters rows using the given SQL expression.
@@ -2492,7 +2492,7 @@ class Dataset[T] private[sql](
    * @group action
    * @since 1.6.0
    */
-  def head(n: Int): Array[T] = withAction("head", limit(n).queryExecution)(collectFromPlan)
+  def head(n: Int): Array[T] = withAction("head", limit(n).queryExecution)(collectFromPlan) //collectFromPlan 是以函数作为参数
 
   /**
    * Returns the first row.
@@ -3309,7 +3309,7 @@ class Dataset[T] private[sql](
 
   /** A convenient function to wrap a logical plan and produce a Dataset. */
   @inline private def withTypedPlan[U : Encoder](logicalPlan: LogicalPlan): Dataset[U] = {
-    Dataset(sparkSession, logicalPlan)
+    Dataset(sparkSession, logicalPlan) // 之前的QueryExecution
   }
 
   /** A convenient function to wrap a set based logical plan and produce a Dataset. */

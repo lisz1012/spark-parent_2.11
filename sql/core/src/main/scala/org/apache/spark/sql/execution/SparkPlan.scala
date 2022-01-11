@@ -291,10 +291,10 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
    * Runs this query returning the result as an array.
    */
   def executeCollect(): Array[InternalRow] = {
-    val byteArrayRdd = getByteArrayRdd()
+    val byteArrayRdd = getByteArrayRdd() // 得到RDD了
 
     val results = ArrayBuffer[InternalRow]()
-    byteArrayRdd.collect().foreach { countAndBytes =>
+    byteArrayRdd.collect().foreach { countAndBytes => // collect是执行算子
       decodeUnsafeRows(countAndBytes._2).foreach(results.+=)
     }
     results.toArray

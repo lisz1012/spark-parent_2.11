@@ -332,7 +332,7 @@ case class DataSource(
    *                        is considered as a non-streaming file based data source. Since we know
    *                        that files already exist, we don't need to check them again.
    */
-  def resolveRelation(checkFilesExist: Boolean = true): BaseRelation = {
+  def resolveRelation(checkFilesExist: Boolean = true): BaseRelation = { // 对数据源具体的类型（csv、text、parquet）去做匹配
     val relation = (providingClass.newInstance(), userSpecifiedSchema) match {
       // TODO: Throw when too much is given.
       case (dataSource: SchemaRelationProvider, Some(schema)) =>
@@ -350,7 +350,7 @@ case class DataSource(
         baseRelation
 
       // We are reading from the results of a streaming query. Load files from the metadata log
-      // instead of listing them using HDFS APIs.
+      // instead of listing them using HDFS APIs. 无论是流的还是非流的，都是想得到HadoopFsRelation
       case (format: FileFormat, _)
           if FileStreamSink.hasMetadata(
             caseInsensitiveOptions.get("path").toSeq ++ paths,
