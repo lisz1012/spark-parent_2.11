@@ -41,7 +41,7 @@ import org.apache.spark.sql.types.{StructField, StructType}
  * @param fileFormat A file format that can be used to read and write the data in files.
  * @param options Configuration used when reading / writing data.
  */
-case class HadoopFsRelation( // Spark的SQL最终核实落实到了RDD，后者又落到了Hadoop的文件上。最终还是IO是瓶颈
+case class HadoopFsRelation( // Spark的SQL最终核实落实到了RDD，后者又落到了Hadoop的文件上。最终还是IO是瓶颈。这个样例类可以看成对于数据源的数据的一个包装
     location: FileIndex,
     partitionSchema: StructType,
     dataSchema: StructType,
