@@ -662,16 +662,16 @@ class SessionCatalog(
    *
    * @param name The name of the table/view that we look up.
    */
-  def lookupRelation(name: TableIdentifier): LogicalPlan = {
+  def lookupRelation(name: TableIdentifier): LogicalPlan = { // 元数据的关联
     synchronized {
       val db = formatDatabaseName(name.database.getOrElse(currentDb))
       val table = formatTableName(name.table)
-      if (db == globalTempViewManager.database) {
+      if (db == globalTempViewManager.database) { // 从全局的Spark SQL的引擎中去找，有没有这个库
         globalTempViewManager.get(table).map { viewDef =>
           SubqueryAlias(table, viewDef)
         }.getOrElse(throw new NoSuchTableException(db, table))
-      } else if (name.database.isDefined || !tempViews.contains(table)) {
-        val metadata = externalCatalog.getTable(db, table)
+      } else if (name.database.isDefined || !tempViews.contains(table)) { // 库有了，但是表没有。session.enableSupportHive; session.sql)()和df.createTempView("xxx")
+        val metadata = externalCatalog.getTable(db, table) // hive元数据
         if (metadata.tableType == CatalogTableType.VIEW) {
           val viewText = metadata.viewText.getOrElse(sys.error("Invalid view without text."))
           // The relation is a view, so we wrap the relation by:

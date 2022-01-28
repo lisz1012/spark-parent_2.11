@@ -657,7 +657,7 @@ class Analyzer(
       val tableIdentWithDb = u.tableIdentifier.copy(
         database = u.tableIdentifier.database.orElse(defaultDatabase))
       try {
-        catalog.lookupRelation(tableIdentWithDb)
+        catalog.lookupRelation(tableIdentWithDb) // catalog开始查找元数据
       } catch {
         case e: NoSuchTableException =>
           u.failAnalysis(s"Table or view not found: ${tableIdentWithDb.unquotedString}", e)
