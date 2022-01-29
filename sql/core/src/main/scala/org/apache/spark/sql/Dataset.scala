@@ -3277,7 +3277,7 @@ class Dataset[T] private[sql](
   /**
    * Collect all elements from a spark plan.
    */
-  private def collectFromPlan(plan: SparkPlan): Array[T] = {
+  private def collectFromPlan(plan: SparkPlan): Array[T] = { // 参数是物理执行计划
     // This projection writes output to a `InternalRow`, which means applying this projection is not
     // thread-safe. Here we create the projection inside this method to make `Dataset` thread-safe.
     val objProj = GenerateSafeProjection.generate(deserializer :: Nil)

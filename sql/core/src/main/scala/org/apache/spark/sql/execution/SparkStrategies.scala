@@ -513,7 +513,7 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
       case logical.Filter(condition, child) =>
         execution.FilterExec(condition, planLater(child)) :: Nil
       case f: logical.TypedFilter =>
-        execution.FilterExec(f.typedCondition(f.deserializer), planLater(f.child)) :: Nil
+        execution.FilterExec(f.typedCondition(f.deserializer), planLater(f.child)) :: Nil // 最内层、第一个被执行的叫做child，子查询。以逻辑plan做衔接
       case e @ logical.Expand(_, _, child) =>
         execution.ExpandExec(e.projections, e.output, planLater(child)) :: Nil
       case logical.Window(windowExprs, partitionSpec, orderSpec, child) =>

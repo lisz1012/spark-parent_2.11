@@ -434,8 +434,8 @@ object ColumnPruning extends Rule[LogicalPlan] {
 
   def apply(plan: LogicalPlan): LogicalPlan = removeProjectBeforeFilter(plan transform {
     // Prunes the unused columns from project list of Project/Aggregate/Expand
-    case p @ Project(_, p2: Project) if (p2.outputSet -- p.references).nonEmpty =>
-      p.copy(child = p2.copy(projectList = p2.projectList.filter(p.references.contains)))
+    case p @ Project(_, p2: Project) if (p2.outputSet -- p.references).nonEmpty => // _ 也就是这个p。 p2.outputSet 与 p.references的差集不为空的话，过滤掉没用的列，覆盖child，列裁剪
+      p.copy(child = p2.copy(projectList = p2.projectList.filter(p.references.contains))) // select a,b,c from (select * from users), 把 * 裁剪成a,b,c列
     case p @ Project(_, a: Aggregate) if (a.outputSet -- p.references).nonEmpty =>
       p.copy(
         child = a.copy(aggregateExpressions = a.aggregateExpressions.filter(p.references.contains)))

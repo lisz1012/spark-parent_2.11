@@ -210,10 +210,10 @@ case class FilterExec(condition: Expression, child: SparkPlan)
 
   protected override def doExecute(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")
-    child.execute().mapPartitionsWithIndexInternal { (index, iter) =>
+    child.execute().mapPartitionsWithIndexInternal { (index, iter) => // 子查询。从结果到源的逆推过程。回归的时候嵌入算子。index是指第几号分区，iter是指第几号迭代器
       val predicate = newPredicate(condition, child.output)
       predicate.initialize(0)
-      iter.filter { row =>
+      iter.filter { row =>                                            // 回溯RDD单链表
         val r = predicate.eval(row)
         if (r) numOutputRows += 1
         r
@@ -585,7 +585,7 @@ case class CoalesceExec(numPartitions: Int, child: SparkPlan) extends UnaryExecN
       // `SinglePartition`.
       new CoalesceExec.EmptyRDDWithPartitions(sparkContext, numPartitions)
     } else {
-      child.execute().coalesce(numPartitions, shuffle = false)
+      child.execute().coalesce(numPartitions, shuffle = false) // 子查询。从结果到源的逆推过程
     }
   }
 }

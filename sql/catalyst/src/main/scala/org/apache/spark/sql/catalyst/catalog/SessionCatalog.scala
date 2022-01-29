@@ -664,8 +664,8 @@ class SessionCatalog(
    */
   def lookupRelation(name: TableIdentifier): LogicalPlan = { // 元数据的关联
     synchronized {
-      val db = formatDatabaseName(name.database.getOrElse(currentDb))
-      val table = formatTableName(name.table)
+      val db = formatDatabaseName(name.database.getOrElse(currentDb)) // 从SQL语句字符串中取得库名
+      val table = formatTableName(name.table) // 从SQL语句字符串中取得表名
       if (db == globalTempViewManager.database) { // 从全局的Spark SQL的引擎中去找，有没有这个库
         globalTempViewManager.get(table).map { viewDef =>
           SubqueryAlias(table, viewDef)
