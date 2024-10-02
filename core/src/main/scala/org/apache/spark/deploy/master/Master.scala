@@ -678,7 +678,7 @@ private[deploy] class Master(
         val assignedCores = scheduleExecutorsOnWorkers(app, usableWorkers, spreadOutApps)
 
         // Now that we've decided how many cores to allocate on each worker, let's allocate them
-        for (pos <- 0 until usableWorkers.length if assignedCores(pos) > 0) { // 一个Worker一个Worker地向外分配启动Executor
+        for (pos <- 0 until usableWorkers.length if assignedCores(pos) > 0) {
           allocateWorkerResourceToExecutors(
             app, assignedCores(pos), app.desc.coresPerExecutor, usableWorkers(pos))
         }
