@@ -701,7 +701,7 @@ private[deploy] class Master(
     // If the number of cores per executor is specified, we divide the cores assigned
     // to this worker evenly among the executors with no remainder.
     // Otherwise, we launch a single executor that grabs all the assignedCores on this worker.
-    val numExecutors = coresPerExecutor.map { assignedCores / _ }.getOrElse(1) // _是coresPerExecutor，算需要多少Executor
+    val numExecutors = coresPerExecutor.map { assignedCores / _ }.getOrElse(1)
     val coresToAssign = coresPerExecutor.getOrElse(assignedCores)
     for (i <- 1 to numExecutors) { // Executor是一个个的地被启动
       val exec = app.addExecutor(worker, coresToAssign)
@@ -712,7 +712,7 @@ private[deploy] class Master(
 
   /**
    * Schedule the currently available resources among waiting apps. This method will be called
-   * every time a new app joins or resource availability changes. 资源注册
+   * every time a new app joins or resource availability changes.
    */
   private def schedule(): Unit = {
     if (state != RecoveryState.ALIVE) {
