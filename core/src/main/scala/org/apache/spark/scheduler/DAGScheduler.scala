@@ -346,7 +346,7 @@ class DAGScheduler(
    * locations that are still available from the previous shuffle to avoid unnecessarily
    * regenerating data.
    */
-  def createShuffleMapStage(shuffleDep: ShuffleDependency[_, _, _], jobId: Int): ShuffleMapStage = { // ShuffleDependency衔接上下两个stage中的RDD
+  def createShuffleMapStage(shuffleDep: ShuffleDependency[_, _, _], jobId: Int): ShuffleMapStage = {
     val rdd = shuffleDep.rdd
     val numTasks = rdd.partitions.length
     val parents = getOrCreateParentStages(rdd, jobId)
@@ -452,11 +452,11 @@ class DAGScheduler(
   }
 
   private def getMissingParentStages(stage: Stage): List[Stage] = {
-    val missing = new HashSet[Stage] // 两个 stage 顺序无所谓
+    val missing = new HashSet[Stage]
     val visited = new HashSet[RDD[_]]
     // We are manually maintaining a stack here to prevent StackOverflowError
     // caused by recursively visiting
-    val waitingForVisit = new ArrayStack[RDD[_]] // 用栈模拟递归，也达到了倒序的目的。总体来讲是递归和栈相结合的方式倒序遍历。用栈做DFS，代码长得像BFS
+    val waitingForVisit = new ArrayStack[RDD[_]]
     def visit(rdd: RDD[_]) {
       if (!visited(rdd)) {
         visited += rdd
@@ -465,7 +465,7 @@ class DAGScheduler(
           for (dep <- rdd.dependencies) {
             dep match {
               case shufDep: ShuffleDependency[_, _, _] =>
-                val mapStage = getOrCreateShuffleMapStage(shufDep, stage.firstJobId) // 这里返回Stage了！Shuffle依赖会划分出Stage
+                val mapStage = getOrCreateShuffleMapStage(shufDep, stage.firstJobId)
                 if (!mapStage.isAvailable) {
                   missing += mapStage
                 }
