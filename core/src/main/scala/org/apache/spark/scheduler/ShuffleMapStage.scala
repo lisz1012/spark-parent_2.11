@@ -90,7 +90,7 @@ private[spark] class ShuffleMapStage(
   /** Returns the sequence of partition ids that are missing (i.e. needs to be computed). */
   override def findMissingPartitions(): Seq[Int] = {
     mapOutputTrackerMaster
-      .findMissingPartitions(shuffleDep.shuffleId)
-      .getOrElse(0 until numPartitions) // 默认是最后有多少个分区，这个stage就有多少个并行度
+      .findMissingPartitions(shuffleDep.shuffleId) // 这里不用看
+      .getOrElse(0 until numPartitions) // 默认是最后那个 rdd有多少个分区，这个stage就有多少个并行度
   }
 }

@@ -147,7 +147,7 @@ private[spark] class TaskSchedulerImpl(
     schedulableBuilder = {
       schedulingMode match {
         case SchedulingMode.FIFO =>
-          new FIFOSchedulableBuilder(rootPool) // rootPool理解成一个跟节点，未来所有任务都向其挂载
+          new FIFOSchedulableBuilder(rootPool) // rootPool理解成一个目录树的节点，未来所有任务都向其挂载
         case SchedulingMode.FAIR =>
           new FairSchedulableBuilder(rootPool, conf)
         case _ =>
@@ -199,7 +199,7 @@ private[spark] class TaskSchedulerImpl(
         ts.isZombie = true
       }
       stageTaskSets(taskSet.stageAttemptId) = manager
-      schedulableBuilder.addTaskSetManager(manager, manager.taskSet.properties) // 挂载到rootPool
+      schedulableBuilder.addTaskSetManager(manager, manager.taskSet.properties) // 把 manager 和 tasks 挂载到rootPool
 
       if (!isLocal && !hasReceivedTask) {
         starvationTimer.scheduleAtFixedRate(new TimerTask() {

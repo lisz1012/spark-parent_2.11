@@ -271,8 +271,8 @@ abstract class RDD[T: ClassTag](
    * RDD is checkpointed.
    */
   final def preferredLocations(split: Partition): Seq[String] = {
-    checkpointRDD.map(_.getPreferredLocations(split)).getOrElse {
-      getPreferredLocations(split) // 像MapPartitionsRDD这种中间转换的RDD是没有什么最佳位置科研的，必须得是贴源的HadoopRDD或者ShuffledRDD才有
+    checkpointRDD.map(_.getPreferredLocations(split)).getOrElse { // 主要就看 Else 这部分
+      getPreferredLocations(split)  // 看 HadoopRDD, 只有包含数据的 RDD才能给出应该在哪里执行
     }
   }
 

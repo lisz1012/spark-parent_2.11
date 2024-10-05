@@ -934,15 +934,15 @@ class DAGScheduler(
     }
   }
 
-  /** Submits stage, but first recursively submits any missing parents. 递归遍历一棵树，一旦遇到shuffle（图结构，就变成下一个Stage）*/
+  /** Submits stage, but first recursively submits any missing parents. */
   private def submitStage(stage: Stage) {
     val jobId = activeJobForStage(stage)
     if (jobId.isDefined) {
       logDebug("submitStage(" + stage + ")")
       if (!waitingStages(stage) && !runningStages(stage) && !failedStages(stage)) {
-        val missing = getMissingParentStages(stage).sortBy(_.id) //从当前的stage往前倒，寻找缺少的前置的父阶段
+        val missing = getMissingParentStages(stage).sortBy(_.id)
         logDebug("missing: " + missing)
-        if (missing.isEmpty) { // 前面再也没有missing Stage了
+        if (missing.isEmpty) {
           logInfo("Submitting " + stage + " (" + stage.rdd + "), which has no missing parents")
           submitMissingTasks(stage, jobId.get)
         } else {
@@ -962,7 +962,7 @@ class DAGScheduler(
     logDebug("submitMissingTasks(" + stage + ")")
 
     // First figure out the indexes of partition ids to compute.
-    val partitionsToCompute: Seq[Int] = stage.findMissingPartitions()
+    val partitionsToCompute: Seq[Int] = stage.findMissingPartitions() // 得到[0, 1, 2, ...] 分区号的集合
 
     // Use the scheduling pool, job group, description, etc. from an ActiveJob associated
     // with this Stage
@@ -980,10 +980,10 @@ class DAGScheduler(
         outputCommitCoordinator.stageStart(
           stage = s.id, maxPartitionId = s.rdd.partitions.length - 1)
     }
-    val taskIdToLocations: Map[Int, Seq[TaskLocation]] = try { // 任务是作用在每一个分区上的
+    val taskIdToLocations: Map[Int, Seq[TaskLocation]] = try { // 任务是作用在每一个分区上的. 尽量做到本地化计算
       stage match {
         case s: ShuffleMapStage =>
-          partitionsToCompute.map { id => (id, getPreferredLocs(stage.rdd, id))}.toMap // getPreferredLocs(stage.rdd, id)并没有被计算，只是一函数的形式封装成了一个Tuple2。只有前面的stage被执行完才知道有没有做过cache，而在Driver端推出去之前还不知道
+          partitionsToCompute.map { id => (id, getPreferredLocs(stage.rdd, id))}.toMap // getPreferredLocs(stage.rdd, id)并没有被计算，只是以函数的形式封装成了一个Tuple2。只有前面的stage被执行完才知道有没有做过cache，而在Driver端推出去之前还不知道
         case s: ResultStage =>
           partitionsToCompute.map { id =>
             val p = s.partitions(id)
@@ -1055,10 +1055,10 @@ class DAGScheduler(
 
     val tasks: Seq[Task[_]] = try {
       val serializedTaskMetrics = closureSerializer.serialize(stage.latestInfo.taskMetrics).array()
-      stage match {
+      stage match {  // 返回值是一个 `Seq[Task[_]]`，表示要执行的任务序列。每个任务都包含了执行该任务所需的所有信息，如任务的二进制代码、分区信息、最佳计算位置等。
         case stage: ShuffleMapStage =>
           stage.pendingPartitions.clear()
-          partitionsToCompute.map { id =>
+          partitionsToCompute.map { id =>   // partitionsToCompute 默认是最后那个 rdd有多少个分区，这个stage也就有多少个并行度
             val locs = taskIdToLocations(id) // 取出计算的最佳位置
             val part = partitions(id)        // 取出分区
             stage.pendingPartitions += id
@@ -1774,7 +1774,7 @@ class DAGScheduler(
       return cached
     }
     // If the RDD has some placement preferences (as is the case for input RDDs), get those
-    val rddPrefs = rdd.preferredLocations(rdd.partitions(partition)).toList // 一个RDD可能来自多个分区
+    val rddPrefs = rdd.preferredLocations(rdd.partitions(partition)).toList // toList 是因为当前这个RDD的一个分区可能来自于前面的多个分区
     if (rddPrefs.nonEmpty) {
       return rddPrefs.map(TaskLocation(_))
     }
