@@ -185,7 +185,7 @@ private[spark] class ExternalSorter[K, V, C](
       val mergeValue = aggregator.get.mergeValue
       val createCombiner = aggregator.get.createCombiner
       var kv: Product2[K, V] = null
-      val update = (hadValue: Boolean, oldValue: C) => { // 没有就直接放进去，有就累加。如果hadValue未true，则必须给出老志，反之就不用给了
+      val update = (hadValue: Boolean, oldValue: C) => { // 没有就直接放进去，有就累加。如果hadValue为true，则必须给出老值，反之就不用给了
         if (hadValue) mergeValue(oldValue, kv._2) else createCombiner(kv._2)
       }
       while (records.hasNext) {

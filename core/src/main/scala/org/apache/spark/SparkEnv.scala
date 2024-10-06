@@ -281,7 +281,7 @@ object SparkEnv extends Logging {
     }
 
     val serializer = instantiateClassFromConf[Serializer](
-      "spark.serializer", "org.apache.spark.serializer.JavaSerializer")
+      "spark.serializer", "org.apache.spark.serializer.JavaSerializer") // Spark默认的是 Java 的序列化器
     logDebug(s"Using serializer: ${serializer.getClass}")
 
     val serializerManager = new SerializerManager(serializer, conf, ioEncryptionKey) // 数据如何序列化，默认实现：JavaSerializer

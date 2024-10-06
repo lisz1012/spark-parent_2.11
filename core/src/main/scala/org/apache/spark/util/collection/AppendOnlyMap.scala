@@ -136,13 +136,13 @@ class AppendOnlyMap[K, V](initialCapacity: Int = 64)
       haveNullValue = true
       return nullValue
     }
-    var pos = rehash(k.hashCode) & mask // 类似 0111111，0-64的某个值，类似哈希区模
+    var pos = rehash(k.hashCode) & mask // 类似 0111111，0-64的某个值，类似哈希取模
     var i = 1
     while (true) { // 线性探测再散列，规避哈希碰撞
       val curKey = data(2 * pos)
       if (curKey.eq(null)) { // 数组的这个位置没有被使用，updateFunc的createCombiner被触发
         val newValue = updateFunc(false, null.asInstanceOf[V]) // 之前没有key且没有老的值，oldValue未空
-        data(2 * pos) = k
+        data(2 * pos) = k   // 键和值分别在偶数位置和比他大一个的奇数位置
         data(2 * pos + 1) = newValue.asInstanceOf[AnyRef]
         incrementSize()
         return newValue
