@@ -342,7 +342,7 @@ object SparkEnv extends Logging {
 
     val blockManagerMaster = new BlockManagerMaster(registerOrLookupEndpoint( // 计算框架自带存储层，自己把持数据的存储，而不是一律写到HDFS，Driver端也有一个EndPointRef，只不过他真的有一个Endpoint在堆里
       BlockManagerMaster.DRIVER_ENDPOINT_NAME,
-      new BlockManagerMasterEndpoint(rpcEnv, isLocal, conf, listenerBus)), // 注意：这里并没有立刻new 出来，而是作为一个函数类型的参数传进了registerOrLookupEndpoint
+      new BlockManagerMasterEndpoint(rpcEnv, isLocal, conf, listenerBus)), // 注意📢：这里并没有立刻new 出来，而是作为一个函数类型的参数传进了registerOrLookupEndpoint
       conf, isDriver)
 
     // NB: blockManager is not valid until initialize() is called later.

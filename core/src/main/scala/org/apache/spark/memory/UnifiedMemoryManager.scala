@@ -53,7 +53,7 @@ private[spark] class UnifiedMemoryManager private[memory] (
     conf,
     numCores,
     onHeapStorageRegionSize,
-    maxHeapMemory - onHeapStorageRegionSize) {
+    maxHeapMemory - onHeapStorageRegionSize) {  // onHeapExecutionMemory大致等于JVM 的 (Xmx系统内存 - 300MB) * 0.6 * 0.5
 
   private def assertInvariants(): Unit = {
     assert(onHeapExecutionMemoryPool.poolSize + onHeapStorageMemoryPool.poolSize == maxHeapMemory)
@@ -63,7 +63,7 @@ private[spark] class UnifiedMemoryManager private[memory] (
 
   assertInvariants()
 
-  override def maxOnHeapStorageMemory: Long = synchronized {
+  override def maxOnHeapStorageMemory: Long = synchronized { // 运行的时候才去计算这个值
     maxHeapMemory - onHeapExecutionMemoryPool.memoryUsed
   }
 
@@ -199,9 +199,9 @@ object UnifiedMemoryManager {
     val maxMemory = getMaxMemory(conf)
     new UnifiedMemoryManager(
       conf,
-      maxHeapMemory = maxMemory,
+      maxHeapMemory = maxMemory,  // 大致等于JVM 的 (Xmx系统内存 - 300MB) * 0.6
       onHeapStorageRegionSize =
-        (maxMemory * conf.getDouble("spark.memory.storageFraction", 0.5)).toLong,
+        (maxMemory * conf.getDouble("spark.memory.storageFraction", 0.5)).toLong,  // 大致等于JVM 的 (Xmx系统内存 - 300MB) * 0.6 * 0.5
       numCores = numCores)
   }
 
@@ -209,11 +209,11 @@ object UnifiedMemoryManager {
    * Return the total amount of memory shared between execution and storage, in bytes.
    */
   private def getMaxMemory(conf: SparkConf): Long = {
-    val systemMemory = conf.getLong("spark.testing.memory", Runtime.getRuntime.maxMemory) // JVM这个Java进程的最大堆空间，on heap memory
+    val systemMemory = conf.getLong("spark.testing.memory", Runtime.getRuntime.maxMemory) // JVM这个Java进程的最大堆空间xmx，on heap memory
     val reservedMemory = conf.getLong("spark.testing.reservedMemory",
       if (conf.contains("spark.testing")) 0 else RESERVED_SYSTEM_MEMORY_BYTES)
     val minSystemMemory = (reservedMemory * 1.5).ceil.toLong
-    if (systemMemory < minSystemMemory) {
+    if (systemMemory < minSystemMemory) { // 如果系统内存不足 450MB, 是用不起 Spark 的. Driver 耗内存, 要产生所有的对象, 所以 Driver 给的内存要尽量大
       throw new IllegalArgumentException(s"System memory $systemMemory must " +
         s"be at least $minSystemMemory. Please increase heap size using the --driver-memory " +
         s"option or spark.driver.memory in Spark configuration.")
@@ -227,7 +227,7 @@ object UnifiedMemoryManager {
           s"--executor-memory option or spark.executor.memory in Spark configuration.")
       }
     }
-    val usableMemory = systemMemory - reservedMemory // 刨了450M，下面又乘了个0.6，保险。Spark在这里做了底层的内存管理，起码是规划
+    val usableMemory = systemMemory - reservedMemory // 刨了300M，下面又乘了个0.6，保险, 官网不推荐改。Spark在这里做了底层的内存管理，起码是规划
     val memoryFraction = conf.getDouble("spark.memory.fraction", 0.6)
     (usableMemory * memoryFraction).toLong
   }
