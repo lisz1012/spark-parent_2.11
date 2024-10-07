@@ -132,7 +132,7 @@ final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> { // 
     final long openStartTime = System.nanoTime();
     partitionWriters = new DiskBlockObjectWriter[numPartitions]; // 下游的分区数
     partitionWriterSegments = new FileSegment[numPartitions];
-    for (int i = 0; i < numPartitions; i++) {
+    for (int i = 0; i < numPartitions; i++) {  // 有多少个分区就会有多少个 Writer 对象去写磁盘, 一一对应顺着写就行, 因为没有 shuffle
       final Tuple2<TempShuffleBlockId, File> tempShuffleBlockIdPlusFile =
         blockManager.diskBlockManager().createTempShuffleBlock();
       final File file = tempShuffleBlockIdPlusFile._2();
@@ -158,9 +158,9 @@ final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> { // 
     }
 
     File output = shuffleBlockResolver.getDataFile(shuffleId, mapId);
-    File tmp = Utils.tempFileWith(output);
+    File tmp = Utils.tempFileWith(output);  // tmp 是个输出文件
     try {
-      partitionLengths = writePartitionedFile(tmp); // 把小文件连接起来，ByPass了排序聚合等步骤，相对比较快。各个小文件按照分区号分别写内容，小文件内部是无序的
+      partitionLengths = writePartitionedFile(tmp); // 把小文件连接起来 (merge)，ByPass了排序聚合等步骤，相对比较快。各个小文件按照分区号分别写内容，小文件内部是无序的
       shuffleBlockResolver.writeIndexFileAndCommit(shuffleId, mapId, partitionLengths, tmp); //写索引文件
     } finally {
       if (tmp.exists() && !tmp.delete()) {

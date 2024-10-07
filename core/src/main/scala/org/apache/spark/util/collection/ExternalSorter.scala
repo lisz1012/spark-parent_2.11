@@ -214,12 +214,12 @@ private[spark] class ExternalSorter[K, V, C](
     var estimatedSize = 0L
     if (usingMap) {
       estimatedSize = map.estimateSize()
-      if (maybeSpill(map, estimatedSize)) {
+      if (maybeSpill(map, estimatedSize)) {  // 里面判断该不该溢写到磁盘, 如果该, 则溢写
         map = new PartitionedAppendOnlyMap[K, C]
       }
     } else {
       estimatedSize = buffer.estimateSize() // 涉及到计算内存的大小
-      if (maybeSpill(buffer, estimatedSize)) {
+      if (maybeSpill(buffer, estimatedSize)) {  // 里面判断该不该溢写到磁盘, 如果该, 则溢写
         buffer = new PartitionedPairBuffer[K, C]
       }
     }

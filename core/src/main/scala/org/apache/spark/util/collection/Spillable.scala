@@ -94,7 +94,7 @@ private[spark] abstract class Spillable[C](taskMemoryManager: TaskMemoryManager)
     if (shouldSpill) {
       _spillCount += 1
       logSpillage(currentMemory)
-      spill(collection)
+      spill(collection)  // 看 ExternalSorter
       _elementsRead = 0
       _memoryBytesSpilled += currentMemory
       releaseMemory()

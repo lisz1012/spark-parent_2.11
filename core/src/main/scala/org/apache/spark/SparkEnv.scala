@@ -293,9 +293,9 @@ object SparkEnv extends Logging {
       RpcEndpointRef = {
       if (isDriver) {
         logInfo("Registering " + name)
-        rpcEnv.setupEndpoint(name, endpointCreator) // 如果是Driver，则触发传进来的new BlockManagerMasterEndpoint(rpcEnv, isLocal, conf, listenerBus))
+        rpcEnv.setupEndpoint(name, endpointCreator) // 如果是Driver，则触发传进来的new BlockManagerMasterEndpoint(rpcEnv, isLocal, conf, listenerBus)), 只有 Driver 有这个 Endpoint, 相当于主节点, 与从节点不同
       } else {
-        RpcUtils.makeDriverRef(name, conf, rpcEnv)  // 不会有 BlockManagerMasterEndpoint，而只是会有一个引用，且driver host的端口是7077，然后就可以发ask和send消息
+        RpcUtils.makeDriverRef(name, conf, rpcEnv)  // 不会有 BlockManagerMasterEndpoint，而只是会有一个引用，且driver host的端口是7077，然后有引用就可以向 Driver 的 Endpoint 发ask和send消息
       }
     }
 
