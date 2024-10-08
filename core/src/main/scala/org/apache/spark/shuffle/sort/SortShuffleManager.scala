@@ -88,7 +88,7 @@ private[spark] class SortShuffleManager(conf: SparkConf) extends ShuffleManager 
       shuffleId: Int,
       numMaps: Int,
       dependency: ShuffleDependency[K, V, C]): ShuffleHandle = { //  基本上就是根据dependency返回handler
-    if (SortShuffleWriter.shouldBypassMergeSort(conf, dependency)) {
+    if (SortShuffleWriter.shouldBypassMergeSort(conf, dependency)) {  // 没有 map 端聚合，且分区数小于等于200，才会在SortShuffleManager中new BypassMergeSortShuffleHandle
       // If there are fewer than spark.shuffle.sort.bypassMergeThreshold partitions and we don't
       // need map-side aggregation, then write numPartitions files directly and just concatenate
       // them at the end. This avoids doing serialization and deserialization twice to merge
@@ -96,13 +96,13 @@ private[spark] class SortShuffleManager(conf: SparkConf) extends ShuffleManager 
       // having multiple files open at a time and thus more memory allocated to buffers.
       new BypassMergeSortShuffleHandle[K, V](
         shuffleId, numMaps, dependency.asInstanceOf[ShuffleDependency[K, V, V]])
-    } else if (SortShuffleManager.canUseSerializedShuffle(dependency)) {
+    } else if (SortShuffleManager.canUseSerializedShuffle(dependency)) {  // Reduce端有聚合则不能走序列化的Handle
       // Otherwise, try to buffer map outputs in a serialized form, since this is more efficient:
       new SerializedShuffleHandle[K, V](
         shuffleId, numMaps, dependency.asInstanceOf[ShuffleDependency[K, V, V]])
-    } else { // 可以处理所有计算逻辑的shuffle，而前面的两个case，是特殊调优加速用的。为什么Spark比MR快的原因之一
+    } else { // 可以处理所有计算逻辑的shuffle，而前面的两个case，是特殊调优加速用的。为什么Spark比MR快的原因之一. 不同的 shuffle 行为有不同的优化
       // Otherwise, buffer map outputs in a deserialized form:
-      new BaseShuffleHandle(shuffleId, numMaps, dependency)
+      new BaseShuffleHandle(shuffleId, numMaps, dependency)  // 有聚合, 会用这个, 一些情况下也会用它, 也就是说BaseShuffleHandle可以处理所有的情况
     }
   }
 
@@ -128,7 +128,7 @@ private[spark] class SortShuffleManager(conf: SparkConf) extends ShuffleManager 
       handle.shuffleId, handle.asInstanceOf[BaseShuffleHandle[_, _, _]].numMaps)
     val env = SparkEnv.get
     handle match { // new ShuffledRDD -> dependency -> handle ShuffleManager.registerShuffle()时的Dependency参数决定ShuffleManager给这个Shuffle注册成了哪种Handler，而Handler决定了两个RDD之间的Shuffle未来使用的是哪一种writer
-      case unsafeShuffleHandle: SerializedShuffleHandle[K @unchecked, V @unchecked] =>  // 调优最狠的。纯内存的字节数组、data page等
+      case unsafeShuffleHandle: SerializedShuffleHandle[K @unchecked, V @unchecked] =>  // 调优最狠的。纯内存的字节数组、data page等 (和 OS 内存管理关系比较大了)
         new UnsafeShuffleWriter(
           env.blockManager,
           shuffleBlockResolver.asInstanceOf[IndexShuffleBlockResolver],
@@ -192,7 +192,7 @@ private[spark] object SortShuffleManager extends Logging {
       log.debug(
         s"Can't use serialized shuffle for shuffle $shufId because an aggregator is defined")
       false
-    } else if (numPartitions > MAX_SHUFFLE_OUTPUT_PARTITIONS_FOR_SERIALIZED_MODE) { // Shuffle之后的RDD的分区数要小于16777215，才能走序列化的Handle
+    } else if (numPartitions > MAX_SHUFFLE_OUTPUT_PARTITIONS_FOR_SERIALIZED_MODE) { // Shuffle之后的RDD的分区数要小于等于16777215，才能走序列化的Handle
       log.debug(s"Can't use serialized shuffle for shuffle $shufId because it has more than " +
         s"$MAX_SHUFFLE_OUTPUT_PARTITIONS_FOR_SERIALIZED_MODE partitions")
       false

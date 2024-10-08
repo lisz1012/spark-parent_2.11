@@ -109,7 +109,7 @@ private[spark] object SortShuffleWriter {
     if (dep.mapSideCombine) { // Map端聚合开启，则不能ByPass
       require(dep.aggregator.isDefined, "Map-side combine without Aggregator specified!")
       false
-    } else { // 上游的RDD不给做聚合，而且下游的分区数小于等于200，才会在SortShuffleManager中new BypassMergeSortShuffleHandle，所以RDD.groupByKey后面有210个分区，则也不会走BypassMergeSortShuffleHandle
+    } else { // 上游的RDD不给做聚合(上面的 if 不成立)，而且下游的分区数小于等于200，才会在SortShuffleManager中new BypassMergeSortShuffleHandle，所以RDD.groupByKey后面有210个分区，则也不会走BypassMergeSortShuffleHandle
       val bypassMergeThreshold: Int = conf.getInt("spark.shuffle.sort.bypassMergeThreshold", 200)
       dep.partitioner.numPartitions <= bypassMergeThreshold
     }
