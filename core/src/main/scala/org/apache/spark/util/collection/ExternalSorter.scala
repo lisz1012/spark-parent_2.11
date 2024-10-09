@@ -194,13 +194,13 @@ private[spark] class ExternalSorter[K, V, C](
         map.changeValue((getPartition(kv._1), kv._1), update) // 需要聚合用map。传update的时候kv已经闭包进入了update函数体
         maybeSpillCollection(usingMap = true)
       }
-    } else { // 用了buffer主要解决的是BypassMergeSortShuffleWriter因为分区数太多、小文件太多而被绕过的情形
+    } else { // 用了buffer主要解决的是BypassMergeSortShuffleWriter不需要聚合, 但是因为分区数太多、小文件太多而被绕过的情形
       // Stick values into our buffer
       while (records.hasNext) { // 迭代计算的数据来自HadoopRDD的recordReader或者shuffledRDD的reader，要么是文件，要么是shuffle的结果
         addElementsRead()
         val kv = records.next()
         buffer.insert(getPartition(kv._1), kv._1, kv._2.asInstanceOf[C]) // K, V, P 不需要聚合用Buffer，这里就有点像MR了，只不过MR的缓冲区是一个字节数组，放的是序列化之后的键值对
-        maybeSpillCollection(usingMap = false)
+        maybeSpillCollection(usingMap = false)  // 这里的溢写就不像 ByPassMergeSortShuffleWriter 那样, 这里的溢写不受下游的分区数影响了, 而是判断内存使用量是否超过了阈值
       }
     }
   }
@@ -215,7 +215,7 @@ private[spark] class ExternalSorter[K, V, C](
     if (usingMap) {
       estimatedSize = map.estimateSize()
       if (maybeSpill(map, estimatedSize)) {  // 里面判断该不该溢写到磁盘, 如果该, 则溢写
-        map = new PartitionedAppendOnlyMap[K, C]
+        map = new PartitionedAppendOnlyMap[K, C]  // 溢写完了, 清空 map
       }
     } else {
       estimatedSize = buffer.estimateSize() // 涉及到计算内存的大小

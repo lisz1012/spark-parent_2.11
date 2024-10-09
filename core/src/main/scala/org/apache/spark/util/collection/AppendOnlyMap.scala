@@ -144,7 +144,7 @@ class AppendOnlyMap[K, V](initialCapacity: Int = 64)
         val newValue = updateFunc(false, null.asInstanceOf[V]) // 之前没有key且没有老的值，oldValue未空
         data(2 * pos) = k   // 键和值分别在偶数位置和比他大一个的奇数位置
         data(2 * pos + 1) = newValue.asInstanceOf[AnyRef]
-        incrementSize()
+        incrementSize()   // 里面会扩容, 以保证数组肯定有坑位
         return newValue
       } else if (k.eq(curKey) || k.equals(curKey)) { // key一样，则要merge，老值加新值
         val newValue = updateFunc(true, data(2 * pos + 1).asInstanceOf[V]) // updateFunc的mergeValue被触发。比MR的环形缓冲区的优点是：环形缓冲区是存完了内存，到马上要溢写的时候才会merge，这里是存的时候就merge省了内存，省内存就省了溢写次数
