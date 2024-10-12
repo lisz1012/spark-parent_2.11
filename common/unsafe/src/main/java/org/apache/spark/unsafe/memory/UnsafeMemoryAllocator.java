@@ -26,10 +26,10 @@ public class UnsafeMemoryAllocator implements MemoryAllocator {
 
   @Override
   public MemoryBlock allocate(long size) throws OutOfMemoryError {
-    long address = Platform.allocateMemory(size); // 堆外分配的java程序空间的基地址, OS可以访问的进程的地址,堆外无对象头的字节数组。动用了Unsafe
+    long address = Platform.allocateMemory(size); // address 是堆外分配的java程序空间的基地址, OS可以访问的进程的地址,堆外无对象头的字节数组。动用了Unsafe, 最底层调用了native 的allocateMemory0
     MemoryBlock memory = new MemoryBlock(null, address, size); // 第一个参数是否为null是Unsafe的开关，决定on/off heap，Platform/Unsafe在putInt的时候会判断这个取值。off heap是Xmx的堆大小，Java除了这个堆，还可以在申请内存空间来用，并不计入堆，Xmx已经限定死了堆的大小，规定new出来的对象总大小小于这个数
     if (MemoryAllocator.MEMORY_DEBUG_FILL_ENABLED) {
-      memory.fill(MemoryAllocator.MEMORY_DEBUG_FILL_CLEAN_VALUE);
+      memory.fill(MemoryAllocator.MEMORY_DEBUG_FILL_CLEAN_VALUE);  // 0xa5
     }
     return memory;
   }

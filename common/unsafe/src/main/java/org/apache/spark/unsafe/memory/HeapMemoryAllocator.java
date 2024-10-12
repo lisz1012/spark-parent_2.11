@@ -45,7 +45,7 @@ public class HeapMemoryAllocator implements MemoryAllocator {
   }
 
   @Override
-  public MemoryBlock allocate(long size) throws OutOfMemoryError {
+  public MemoryBlock allocate(long size) throws OutOfMemoryError {  // 大致看一下即可
     if (shouldPool(size)) {
       synchronized (this) {
         final LinkedList<WeakReference<long[]>> pool = bufferPoolsBySize.get(size);
