@@ -61,7 +61,7 @@ final class PackedRecordPointer {
   /** Bit mask for the lower 27 bits of a long. */
   private static final long MASK_LONG_LOWER_27_BITS = (1L << 27) - 1;
 
-  /** Bit mask for the lower 51 bits of a long. */
+  /** Bit mask for the lower 51 bits of a long. 从右往左 51 个 1*/
   private static final long MASK_LONG_LOWER_51_BITS = (1L << 51) - 1;
 
   /** Bit mask for the upper 13 bits of a long */

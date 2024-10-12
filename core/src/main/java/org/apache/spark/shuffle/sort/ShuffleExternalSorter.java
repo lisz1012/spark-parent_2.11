@@ -366,7 +366,7 @@ final class ShuffleExternalSorter extends MemoryConsumer {
    */
   private void  acquireNewPageIfNecessary(int required) {
     if (currentPage == null ||
-      pageCursor + required > currentPage.getBaseOffset() + currentPage.size() ) {
+      pageCursor + required > currentPage.getBaseOffset() + currentPage.size() ) {  // currentPage.getBaseOffset()算出了当前页在内存中的基地址
       // TODO: try to find space in previous pages
       currentPage = allocatePage(required);     // 触发了钨丝计划，再往里面调用的时候required由int变成了long
       pageCursor = currentPage.getBaseOffset(); // 返回值是16。LONG_ARRAY_OFFSET = 16。游标就指向long数组对象的第一个元素了
@@ -390,15 +390,15 @@ final class ShuffleExternalSorter extends MemoryConsumer {
 
     growPointerArrayIfNecessary(); // 是否扩容
     // Need 4 bytes to store the record length.
-    final int required = length + 4; // 这里就有点想自己手写RPC自定义协议了
+    final int required = length + 4; // 这里就有点想自己手写RPC自定义协议了, 这 4 个字节是描述他有多长, 就是存 length 这个数
     acquireNewPageIfNecessary(required); // page在内存、磁盘和数据库里都有这么个概念。从物理地址到晋城的虚拟地址，再到spark管理的page都属于虚拟映射。spark现在就要划分格子了，每个格子最后也要映射到内核管理的分页，字节数组要放入在堆中的这个page
 
-    assert(currentPage != null);
+    assert(currentPage != null);  // currentPage 是由上面 394 -> 371 行由钨丝计划产生的
     final Object base = currentPage.getBaseObject(); // long[]
     final long recordAddress = taskMemoryManager.encodePageNumberAndOffset(currentPage, pageCursor); // 第一个参数是段基地址, 第二个参数是偏移量, 上面的acquireNewPageIfNecessary()中计算得到了16。可能放多笔记录，他应该出现在线性空间的哪个位置
     Platform.putInt(base, pageCursor, length); // 里面不是方法调用，热是直接操作热紧致字节数组浮写4个字节，表示这个长度。 Unsafe相同的方法会根据base是否为null，处理方法不一样，null的时候，直接向pageCursor所指向的物理地址填充4个字节。堆内：先new array对象，但不通过array[1] = 2就能用Unsafe调用底层的C代码偷偷改array中的值；堆外：要先allocateMem
     pageCursor += 4;
-    Platform.copyMemory(recordBase, recordOffset, base, pageCursor, length); // 进来的字节数组数据存入页，页可能在堆内，也可能在堆外，base为null就往堆外拷贝。这里的base和pageCursor是目标地址。还是用了base是否为null这个开关
+    Platform.copyMemory(recordBase, recordOffset, base, pageCursor, length); // 进来的字节数组数据存入页，页可能在堆内，也可能在堆外，base为null就往堆外拷贝。这里的base和pageCursor是目标地址。还是用了base是否为null这个开关.前两个参数是源的, 后两个是目标的
     pageCursor += length;
     inMemSorter.insertRecord(recordAddress, partitionId); // recordBase实际上是个字节数组（地址），但他没有被传进insertRecord，存的是索引，排序排的也是索引。接收一个分区号是为了相同分区的排在一起，分区号是int，4个字节。堆里开辟了索引，指向堆里（外）的一个位置
   }

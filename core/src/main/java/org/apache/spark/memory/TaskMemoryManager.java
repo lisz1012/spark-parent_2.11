@@ -287,13 +287,13 @@ public class TaskMemoryManager {
 
     final int pageNumber;   // 一个任务可能申请一个或多个page
     synchronized (this) {
-      pageNumber = allocatedPages.nextClearBit(0); // 用BitSet的位来记录申请到第几页了，从给出的偏移量开始往后着false（0）
+      pageNumber = allocatedPages.nextClearBit(0); // 用BitSet的位来记录申请到第几页了，从给出的偏移量开始往后找false也就是0, 返回给定位之后面第一个 0 的下标
       if (pageNumber >= PAGE_TABLE_SIZE) {
         releaseExecutionMemory(acquired, consumer);
         throw new IllegalStateException(
           "Have already allocated a maximum of " + PAGE_TABLE_SIZE + " pages");
       }
-      allocatedPages.set(pageNumber);
+      allocatedPages.set(pageNumber); // 把某一个下标位置设置成 1, 下次再调用pageNumber = allocatedPages.nextClearBit(0);就返回下一个位置了
     }
     MemoryBlock page = null;
     try {

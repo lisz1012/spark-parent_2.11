@@ -106,7 +106,7 @@ private[spark] abstract class Task[T](
       Option(attemptNumber)).setCurrentContext()
 
     try {
-      runTask(context)
+      runTask(context)  // 有两种实现 ResultTask 和 ShuffleMapTask, 后者需要 write, 然后有三种 writer 可选, 包括有钨丝计划的UnsafeShuffleWriter
     } catch {
       case e: Throwable =>
         // Catch all errors; run task failure callbacks, and rethrow the exception.
