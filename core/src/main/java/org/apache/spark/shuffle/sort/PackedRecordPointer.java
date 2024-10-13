@@ -80,7 +80,7 @@ final class PackedRecordPointer {
     // Also note that this relies on some internals of how TaskMemoryManager encodes its addresses.
     final long pageNumber = (recordPointer & MASK_LONG_UPPER_13_BITS) >>> 24; // 高24位移到了最右边，下面的计算让高低24位在64位中分立两边，分别描述分区号和寻址地址。然后索引被排序的时候，就可以把相同的分区的数据排在一起了
     final long compressedAddress = pageNumber | (recordPointer & MASK_LONG_LOWER_27_BITS);
-    return (((long) partitionId) << 40) | compressedAddress; // 这就是为什么下游分区数不超过16777215的时候才能走堆外内存，这个partitionId也在索引里，这就可以根据partition排序了。这个返回值里有partitionId、pageNumber、offsetInPage。第24位移到了最左边
+    return (((long) partitionId) << 40) | compressedAddress; // 这就是为什么下游分区数不超过16777215的时候才能走堆外内存(只是截取了 partitionId 这个 int 的低 24 位)，这个partitionId也在索引里，这就可以根据partition排序了, 实现分区有序。这个返回值里有partitionId、pageNumber、offsetInPage。第24位移到了最左边
   }
 
   private long packedRecordPointer;

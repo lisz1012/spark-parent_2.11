@@ -218,7 +218,7 @@ public class UnsafeShuffleWriter<K, V> extends ShuffleWriter<K, V> { // BypassMe
       sparkConf,
       writeMetrics);
     serBuffer = new MyByteArrayOutputStream(DEFAULT_INITIAL_SER_BUFFER_SIZE); //指向堆内内存的一个字节数组空间
-    serOutputStream = serializer.serializeStream(serBuffer);
+    serOutputStream = serializer.serializeStream(serBuffer);  // serOutputStream和 serBuffer 建立关联 下面会用到
   }
 
   @VisibleForTesting
@@ -259,12 +259,12 @@ public class UnsafeShuffleWriter<K, V> extends ShuffleWriter<K, V> { // BypassMe
     serBuffer.reset();
     serOutputStream.writeKey(key, OBJECT_CLASS_TAG);
     serOutputStream.writeValue(record._2(), OBJECT_CLASS_TAG); // 先把key和value做序列化为字节数组，写到buffer中去
-    serOutputStream.flush();  // 写入了堆里的字节数组，下面的serBuffer.getBuf()会用到它
+    serOutputStream.flush();  // 写入了堆里的字节数组，下面的serBuffer.getBuf()会用到它, 上面的221 行已经和serBuffer建立了关联
 
     final int serializedRecordSize = serBuffer.size();
     assert (serializedRecordSize > 0);
 
-    sorter.insertRecord( // 往里面插入的是字节数组
+    sorter.insertRecord( // 往里面插入的是字节数组. 把数据依次放入 serBuffewr 中，然后再放入分页的 sorter 中
       serBuffer.getBuf(), Platform.BYTE_ARRAY_OFFSET, serializedRecordSize, partitionId);
   }
 

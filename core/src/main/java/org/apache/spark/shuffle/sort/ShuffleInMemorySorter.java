@@ -73,7 +73,7 @@ final class ShuffleInMemorySorter {
     assert (initialSize > 0);
     this.initialSize = initialSize;
     this.useRadixSort = useRadixSort;
-    this.array = consumer.allocateArray(initialSize);  // array是索引，排序的时候只是排他
+    this.array = consumer.allocateArray(initialSize);  // array是索引，排序的时候只是排他, 跟他所索引的数据一样，有可能在堆内或堆外
     this.usableCapacity = getUsableCapacity();
   }
 
@@ -147,7 +147,7 @@ final class ShuffleInMemorySorter {
     if (!hasSpaceForAnotherRecord()) {
       throw new IllegalStateException("There is no space for new record");
     }
-    array.set(pos, PackedRecordPointer.packPointer(recordPointer, partitionId));
+    array.set(pos, PackedRecordPointer.packPointer(recordPointer, partitionId)); // 这个 array 是UnsafeShuffleWriter 的排序时的索引, 有可能在堆内或堆外
     pos++;
   }
 

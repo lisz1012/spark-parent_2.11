@@ -45,7 +45,7 @@ public class UnsafeMemoryAllocator implements MemoryAllocator {
       "TMM-allocated pages must be freed via TMM.freePage(), not directly in allocator free()";
 
     if (MemoryAllocator.MEMORY_DEBUG_FILL_ENABLED) {
-      memory.fill(MemoryAllocator.MEMORY_DEBUG_FILL_FREED_VALUE);
+      memory.fill(MemoryAllocator.MEMORY_DEBUG_FILL_FREED_VALUE);  // 释放的时候是填充0x5a😀😀
     }
     Platform.freeMemory(memory.offset);
     // As an additional layer of defense against use-after-free bugs, we mutate the
