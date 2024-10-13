@@ -234,7 +234,7 @@ public class UnsafeShuffleWriter<K, V> extends ShuffleWriter<K, V> { // BypassMe
     final File tmp = Utils.tempFileWith(output);
     try {
       try {
-        partitionLengths = mergeSpills(spills, tmp);
+        partitionLengths = mergeSpills(spills, tmp);  // 把所有的spill文件合并成一个文件
       } finally {
         for (SpillInfo spill : spills) {
           if (spill.file.exists() && ! spill.file.delete()) {

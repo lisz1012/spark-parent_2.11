@@ -184,7 +184,7 @@ final class ShuffleInMemorySorter {
     int offset = 0;
     if (useRadixSort) {
       offset = RadixSort.sort(
-        array, pos,
+        array, pos,  // 拍的就是索引 array, 有可能在堆内或堆外
         PackedRecordPointer.PARTITION_ID_START_BYTE_INDEX,
         PackedRecordPointer.PARTITION_ID_END_BYTE_INDEX, false, false);
     } else {
@@ -196,7 +196,7 @@ final class ShuffleInMemorySorter {
       Sorter<PackedRecordPointer, LongArray> sorter =
         new Sorter<>(new ShuffleSortDataFormat(buffer));
 
-      sorter.sort(array, 0, pos, SORT_COMPARATOR);
+      sorter.sort(array, 0, pos, SORT_COMPARATOR);  // 按照 partition 排序 相同的 partition 放在一起, 分区有序, 看这个SORT_COMPARATOR就知道了
     }
     return new ShuffleSorterIterator(pos, array, offset);
   }

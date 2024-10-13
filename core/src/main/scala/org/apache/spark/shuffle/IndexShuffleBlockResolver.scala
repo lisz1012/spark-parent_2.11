@@ -52,7 +52,7 @@ private[spark] class IndexShuffleBlockResolver(
   private val transportConf = SparkTransportConf.fromSparkConf(conf, "shuffle")
 
   def getDataFile(shuffleId: Int, mapId: Int): File = {
-    blockManager.diskBlockManager.getFile(ShuffleDataBlockId(shuffleId, mapId, NOOP_REDUCE_ID))
+    blockManager.diskBlockManager.getFile(ShuffleDataBlockId(shuffleId, mapId, NOOP_REDUCE_ID))  // ShuffleDataBlockId样例类会生成文件名
   }
 
   private def getIndexFile(shuffleId: Int, mapId: Int): File = {

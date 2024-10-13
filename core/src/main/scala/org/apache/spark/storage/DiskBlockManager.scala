@@ -74,7 +74,7 @@ private[spark] class DiskBlockManager(conf: SparkConf, deleteFilesOnStop: Boolea
       }
     }
 
-    new File(subDir, filename) // 这里的Block就是文件
+    new File(subDir, filename) // 这里的Block就是文件,也有可能是内存里的东西
   }
 
   def getFile(blockId: BlockId): File = getFile(blockId.name)

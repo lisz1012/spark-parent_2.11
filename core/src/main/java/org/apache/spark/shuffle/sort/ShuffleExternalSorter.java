@@ -181,7 +181,7 @@ final class ShuffleExternalSorter extends MemoryConsumer {
     final SerializerInstance ser = DummySerializerInstance.INSTANCE;
 
     final DiskBlockObjectWriter writer =
-      blockManager.getDiskWriter(blockId, file, ser, fileBufferSizeBytes, writeMetricsToUse);
+      blockManager.getDiskWriter(blockId, file, ser, fileBufferSizeBytes, writeMetricsToUse); // 🐱 通过blockManager来写磁盘
 
     int currentPartition = -1;
     while (sortedRecords.hasNext()) {
@@ -385,7 +385,7 @@ final class ShuffleExternalSorter extends MemoryConsumer {
     if (inMemSorter.numRecords() >= numElementsForSpillThreshold) {
       logger.info("Spilling data because number of spilledRecords crossed the threshold " +
         numElementsForSpillThreshold);
-      spill();   // 🎒这里是溢写了, 看 ShuffleExternalSorter
+      spill();   // 🎒这里是溢写了, 其中要排序, 看 ShuffleExternalSorter
     }
 
     growPointerArrayIfNecessary(); // 是否扩容
