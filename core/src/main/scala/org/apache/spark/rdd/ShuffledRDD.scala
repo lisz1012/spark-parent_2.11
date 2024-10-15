@@ -84,7 +84,7 @@ class ShuffledRDD[K: ClassTag, V: ClassTag, C: ClassTag](
         serializerManager.getSerializer(implicitly[ClassTag[K]], implicitly[ClassTag[V]])
       }
     }
-    List(new ShuffleDependency(prev, part, serializer, keyOrdering, aggregator, mapSideCombine)) // prev 是shuffle前面的那个 RDD. sortByKey、groupByKey、reduceByKey之所以不同，在于new ShuffleDependency的时候传进来的参数不同，这些参数最终是被拿来找registerShuffle方法去使用
+    List(new ShuffleDependency(prev, part, serializer, keyOrdering, aggregator, mapSideCombine)) // prev 是shuffle前面的那个 RDD. sortByKey、groupByKey、reduceByKey之所以不同，在于new ShuffleDependency的时候传进来的参数不同，这些参数最终是被拿来找registerShuffle方法去使用. dependency中就有 aggregator, 也就有 combine 的三个函数
   }
 
   override val partitioner = Some(part)

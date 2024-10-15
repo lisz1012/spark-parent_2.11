@@ -42,14 +42,14 @@ private[spark] class BlockStoreShuffleReader[K, C](
 
   /** Read the combined key-values for this reduce task */
   override def read(): Iterator[Product2[K, C]] = { // 两大步：1。流是怎么找到的 2。怎么组建了不同的迭代器供任务执行。这里并没有计算发生
-    val wrappedStreams = new ShuffleBlockFetcherIterator(//牵扯到块的拉取的过程，这个stream是个Iterator
+    val wrappedStreams = new ShuffleBlockFetcherIterator( // 牵扯到块的拉取的过程，这个stream是个Iterator. new 这个对象的时候初始化(initialize()), 会去拉取远程和本地的数据results, 将来遍历
       context,
-      blockManager.shuffleClient, // Netty的传输服务
+      blockManager.shuffleClient, // Netty的传输服务: NettyBlockTransferService
       blockManager,
-      mapOutputTracker.getMapSizesByExecutorId(handle.shuffleId, startPartition, endPartition), // 上游的输出会向mapOutputTracker里面更新mapStatus，下游会通过他去寻找。上游有多少个分区？每个分区多少个块是可以取出来的
+      mapOutputTracker.getMapSizesByExecutorId(handle.shuffleId, startPartition, endPartition), // 上游的输出会向mapOutputTracker里面更新mapStatus，下游会通过他去寻找。上游有多少个分区？每个分区多少个块是可以取出来的. 所有的结果都会向mapOutputTracker汇总, 他知道上游有多少个分区, 每个分区多少个块, 下游迅速问他就知道这些信息了
       serializerManager.wrapStream,
       // Note: we use getSizeAsMb when no suffix is provided for backwards compatibility
-      SparkEnv.get.conf.getSizeAsMb("spark.reducer.maxSizeInFlight", "48m") * 1024 * 1024,
+      SparkEnv.get.conf.getSizeAsMb("spark.reducer.maxSizeInFlight", "48m") * 1024 * 1024,  // 这个核一下的都是可以调有的点
       SparkEnv.get.conf.getInt("spark.reducer.maxReqsInFlight", Int.MaxValue),
       SparkEnv.get.conf.get(config.REDUCER_MAX_BLOCKS_IN_FLIGHT_PER_ADDRESS),
       SparkEnv.get.conf.get(config.MAX_REMOTE_BLOCK_SIZE_FETCH_TO_MEM),
@@ -74,11 +74,11 @@ private[spark] class BlockStoreShuffleReader[K, C](
       },
       context.taskMetrics().mergeShuffleReadMetrics())
 
-    // An interruptible iterator must be used here in order to support task cancellation
-    val interruptibleIter = new InterruptibleIterator[(Any, Any)](context, metricIter)
+    // An interruptible iterator must be used here in order to support task cancellation 仅仅改变分区数量还是需要聚合和排序?需要的操作越复杂, 走入的 if 就越多
+    val interruptibleIter = new InterruptibleIterator[(Any, Any)](context, metricIter) // 推测执行, 一个节点执行的太慢, 就在其他节点再发起一个执行. 多节点执行的时候一个节点执行完了, 其他节点就别执行了
 
-    val aggregatedIter: Iterator[Product2[K, C]] = if (dep.aggregator.isDefined) {
-      if (dep.mapSideCombine) {
+    val aggregatedIter: Iterator[Product2[K, C]] = if (dep.aggregator.isDefined) { // 聚合的迭代器, 定义了聚合器还分为有 combine 和没有 combine 两种情况
+      if (dep.mapSideCombine) { // 有map 端 combine就有三个函数: 第一条记录, 后续记录, 合并溢写文件
         // We are reading values that are already combined
         val combinedKeyValuesIterator = interruptibleIter.asInstanceOf[Iterator[(K, C)]]
         dep.aggregator.get.combineCombinersByKey(combinedKeyValuesIterator, context)
@@ -91,7 +91,7 @@ private[spark] class BlockStoreShuffleReader[K, C](
       }
     } else {
       require(!dep.mapSideCombine, "Map-side combine without Aggregator specified!")
-      interruptibleIter.asInstanceOf[Iterator[Product2[K, C]]]
+      interruptibleIter.asInstanceOf[Iterator[Product2[K, C]]] // 没定义聚合器, 直接返回原始的迭代器
     }
 
     // Sort the output if there is a sort ordering defined.
@@ -100,7 +100,7 @@ private[spark] class BlockStoreShuffleReader[K, C](
         // Create an ExternalSorter to sort the data.
         val sorter =
           new ExternalSorter[K, C, C](context, ordering = Some(keyOrd), serializer = dep.serializer)
-        sorter.insertAll(aggregatedIter)
+        sorter.insertAll(aggregatedIter)   // 又遇到了 sorter.insertAll()方法
         context.taskMetrics().incMemoryBytesSpilled(sorter.memoryBytesSpilled)
         context.taskMetrics().incDiskBytesSpilled(sorter.diskBytesSpilled)
         context.taskMetrics().incPeakExecutionMemory(sorter.peakMemoryUsedBytes)

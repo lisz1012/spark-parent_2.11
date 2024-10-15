@@ -34,7 +34,7 @@ case class Aggregator[K, V, C] (
     mergeValue: (C, V) => C,
     mergeCombiners: (C, C) => C) {
 
-  def combineValuesByKey(
+  def combineValuesByKey(  // shuffle 的时候上游如果没开启combine，这个函数就会被调用, 比如说groupByKey
       iter: Iterator[_ <: Product2[K, V]],
       context: TaskContext): Iterator[(K, C)] = {
     val combiners = new ExternalAppendOnlyMap[K, V, C](createCombiner, mergeValue, mergeCombiners)
@@ -43,7 +43,7 @@ case class Aggregator[K, V, C] (
     combiners.iterator
   }
 
-  def combineCombinersByKey(
+  def combineCombinersByKey( // shuffle 的时候上游如果开启了combine，这个函数就会被调用, 比如说reduceByKey
       iter: Iterator[_ <: Product2[K, C]],
       context: TaskContext): Iterator[(K, C)] = {
     val combiners = new ExternalAppendOnlyMap[K, C, C](identity, mergeCombiners, mergeCombiners)

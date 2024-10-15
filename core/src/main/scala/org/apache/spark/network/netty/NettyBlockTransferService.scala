@@ -62,7 +62,7 @@ private[spark] class NettyBlockTransferService(
   private[this] var appId: String = _
 
   override def init(blockDataManager: BlockDataManager): Unit = {
-    val rpcHandler = new NettyBlockRpcServer(conf.getAppId, serializer, blockDataManager)
+    val rpcHandler = new NettyBlockRpcServer(conf.getAppId, serializer, blockDataManager)  // NettyBlockRpcServer里面有个我们熟悉的 receive()方法, 匹配下面的 OpenBlocks
     var serverBootstrap: Option[TransportServerBootstrap] = None
     var clientBootstrap: Option[TransportClientBootstrap] = None
     if (authEnabled) {
@@ -110,9 +110,9 @@ private[spark] class NettyBlockTransferService(
     try {
       val blockFetchStarter = new RetryingBlockFetcher.BlockFetchStarter {
         override def createAndStart(blockIds: Array[String], listener: BlockFetchingListener) {
-          val client = clientFactory.createClient(host, port) // OpenBlock message接收端的host和port
+          val client = clientFactory.createClient(host, port) // OpenBlock message接收端的host和port. 和在别的 Executor 节点上的上面的 server 的 Host:port 建立连接
           new OneForOneBlockFetcher(client, appId, execId, blockIds, listener,
-            transportConf, tempFileManager).start() // 干活的代码跑起来了，会拉取数据
+            transportConf, tempFileManager).start() // ❤️ 这里有个 start!! 干活的代码跑起来了，会拉取数据
         }
       }
 
@@ -120,9 +120,9 @@ private[spark] class NettyBlockTransferService(
       if (maxRetries > 0) {
         // Note this Fetcher will correctly handle maxRetries == 0; we avoid it just in case there's
         // a bug in this code. We should remove the if statement once we're sure of the stability.
-        new RetryingBlockFetcher(transportConf, blockFetchStarter, blockIds, listener).start()
+        new RetryingBlockFetcher(transportConf, blockFetchStarter, blockIds, listener).start()  // ❤️ 这里有个 start!! 干活的代码跑起来了，会拉取数据
       } else {
-        blockFetchStarter.createAndStart(blockIds, listener)
+        blockFetchStarter.createAndStart(blockIds, listener)  // 看这个方法的实现，会拉取数据
       }
     } catch {
       case e: Exception =>

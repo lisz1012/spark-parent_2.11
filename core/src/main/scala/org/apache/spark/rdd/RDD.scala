@@ -462,7 +462,7 @@ abstract class RDD[T: ClassTag](
 
       // include a shuffle step so that our upstream tasks are still distributed
       new CoalescedRDD(
-        new ShuffledRDD[Int, T, T](
+        new ShuffledRDD[Int, T, T](  // Shuffle制作改变分区数, 不错聚合和排序
           mapPartitionsWithIndexInternal(distributePartition, isOrderSensitive = true),
           new HashPartitioner(numPartitions)),
         numPartitions,

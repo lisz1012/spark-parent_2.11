@@ -109,7 +109,7 @@ public class OneForOneBlockFetcher {
     if (blockIds.length == 0) {
       throw new IllegalArgumentException("Zero-sized blockIds array");
     }
-
+    // openMessage 包含了appId, execId, blockIds
     client.sendRpc(openMessage.toByteBuffer(), new RpcResponseCallback() { // openMessage 是一个载体、一个消息，要从一端发给另一端，序列化时用到了Netty的ByteBuffer
       @Override
       public void onSuccess(ByteBuffer response) {
@@ -124,7 +124,7 @@ public class OneForOneBlockFetcher {
               client.stream(OneForOneStreamManager.genStreamChunkId(streamHandle.streamId, i),
                 new DownloadCallback(i));
             } else {
-              client.fetchChunk(streamHandle.streamId, i, chunkCallback); // 这里面有个listener
+              client.fetchChunk(streamHandle.streamId, i, chunkCallback); // chunkCallback这里面有个listener的调用
             }
           }
         } catch (Exception e) {

@@ -96,8 +96,8 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
     } else {
       new ShuffledRDD[K, V, C](self, partitioner)
         .setSerializer(serializer)
-        .setAggregator(aggregator)    // 三个函数: createCombiner, mergeValue, mergeCombiners设进了 ShuffleRDD 里
-        .setMapSideCombine(mapSideCombine)
+        .setAggregator(aggregator)    // setAggregator就有了三个聚合需要的函数: createCombiner, mergeValue, mergeCombiners设进了 ShuffleRDD 里
+        .setMapSideCombine(mapSideCombine)  // reduceByKey 取 true，groupByKey 取 false
     }
   }
 

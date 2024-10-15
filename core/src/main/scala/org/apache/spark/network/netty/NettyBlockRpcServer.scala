@@ -55,7 +55,7 @@ class NettyBlockRpcServer(
     logTrace(s"Received request: $message")
 
     message match {
-      case openBlocks: OpenBlocks =>
+      case openBlocks: OpenBlocks =>  // 上游 shuffle的时候收到了下游的拉取请求
         val blocksNum = openBlocks.blockIds.length
         val blocks = for (i <- (0 until blocksNum).view)
           yield blockManager.getBlockData(BlockId.apply(openBlocks.blockIds(i)))

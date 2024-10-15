@@ -92,8 +92,8 @@ private[spark] class ShuffleMapTask(
     var writer: ShuffleWriter[Any, Any] = null
     try {
       val manager = SparkEnv.get.shuffleManager // ShuffleManager 管理shuffle的上下游，ShuffleWriter和ShuffleReader。一个任务会调用ShuffleWriter的write方法把计算结果写到本地的文件系统里去，等待ShuffleReader来拉取
-      writer = manager.getWriter[Any, Any](dep.shuffleHandle, partitionId, context)   // 这个 getWriter 取的是谁?复杂在这里, 有三种情况
-      writer.write(rdd.iterator(partition, context).asInstanceOf[Iterator[_ <: Product2[Any, Any]]]) // 这里的 RDD 是最后那个, 进入 write()看去. 窄依赖的情况下, 调最后那个 rdd 的 iterator() 一定会调到stage最开始的那个 rdd 上去
+      writer = manager.getWriter[Any, Any](dep.shuffleHandle, partitionId, context) // 这个 getWriter 取的是谁?复杂在这里, 有三种情况
+      writer.write(rdd.iterator(partition, context).asInstanceOf[Iterator[_ <: Product2[Any, Any]]]) // 这里的 RDD 是最后那个, 进入 write()看去. 窄依赖的情况下, 调最后那个 rdd 的 iterator() 一定会调到compute,然后调到stage最开始的那个 rdd 上去, 就到了 ShuffledRDD
       writer.stop(success = true).get
     } catch {
       case e: Exception =>

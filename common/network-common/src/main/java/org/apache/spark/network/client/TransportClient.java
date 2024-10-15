@@ -141,7 +141,7 @@ public class TransportClient implements Closeable {
     StreamChunkId streamChunkId = new StreamChunkId(streamId, chunkIndex);
     handler.addFetchRequest(streamChunkId, callback);
 
-    channel.writeAndFlush(new ChunkFetchRequest(streamChunkId)).addListener(future -> { // 拉取数据
+    channel.writeAndFlush(new ChunkFetchRequest(streamChunkId)).addListener(future -> { // 从上游拉取要 shuffle 的数据
       if (future.isSuccess()) {
         long timeTaken = System.currentTimeMillis() - startTime;
         if (logger.isTraceEnabled()) {
@@ -219,7 +219,7 @@ public class TransportClient implements Closeable {
     long requestId = Math.abs(UUID.randomUUID().getLeastSignificantBits());
     handler.addRpcRequest(requestId, callback);
 
-    channel.writeAndFlush(new RpcRequest(requestId, new NioManagedBuffer(message)))
+    channel.writeAndFlush(new RpcRequest(requestId, new NioManagedBuffer(message)))  // 发送拉取数据的请求
         .addListener(future -> {
           if (future.isSuccess()) {
             long timeTaken = System.currentTimeMillis() - startTime;
