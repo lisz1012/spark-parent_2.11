@@ -282,7 +282,7 @@ abstract class RDD[T: ClassTag](
    * subclasses of RDD.
    */
   final def iterator(split: Partition, context: TaskContext): Iterator[T] = {
-    if (storageLevel != StorageLevel.NONE) {
+    if (storageLevel != StorageLevel.NONE) {  // 这个 if 条件的意思是做过 persist. 迭代器的数据可以来自三个地方: 跟前面的 RDD 实时去要的,从 persist 里面 get读取, 从checkpoint 读取
       getOrCompute(split, context)
     } else {
       computeOrReadCheckpoint(split, context)
@@ -321,7 +321,7 @@ abstract class RDD[T: ClassTag](
     if (isCheckpointedAndMaterialized) {
       firstParent[T].iterator(split, context)
     } else {
-      compute(split, context)
+      compute(split, context) // 模版方法,各中RDD有不同的 compute() 实现
     }
   }
 

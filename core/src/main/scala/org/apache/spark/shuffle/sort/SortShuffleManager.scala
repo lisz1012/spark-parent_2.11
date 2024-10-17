@@ -128,7 +128,7 @@ private[spark] class SortShuffleManager(conf: SparkConf) extends ShuffleManager 
       handle.shuffleId, handle.asInstanceOf[BaseShuffleHandle[_, _, _]].numMaps)
     val env = SparkEnv.get
     handle match { // new ShuffledRDD -> dependency -> handle ShuffleManager.registerShuffle()时的Dependency参数决定ShuffleManager给这个Shuffle注册成了哪种Handler，而Handler决定了两个RDD之间的Shuffle未来使用的是哪一种writer
-      case unsafeShuffleHandle: SerializedShuffleHandle[K @unchecked, V @unchecked] =>  // 调优最狠的。纯内存的字节数组、data page等 (和 OS 内存管理关系比较大了)
+      case unsafeShuffleHandle: SerializedShuffleHandle[K @unchecked, V @unchecked] =>  // 调优最狠的, 也是适用范围最小的。纯内存的字节数组、data page等 (和 OS 内存管理关系比较大了)
         new UnsafeShuffleWriter(
           env.blockManager,
           shuffleBlockResolver.asInstanceOf[IndexShuffleBlockResolver],
@@ -145,7 +145,7 @@ private[spark] class SortShuffleManager(conf: SparkConf) extends ShuffleManager 
           mapId,
           context,
           env.conf)
-      case other: BaseShuffleHandle[K @unchecked, V @unchecked, _] =>
+      case other: BaseShuffleHandle[K @unchecked, V @unchecked, _] =>  // 适用范围最大, 兜底
         new SortShuffleWriter(shuffleBlockResolver, other, mapId, context)
     }
   }
@@ -188,7 +188,7 @@ private[spark] object SortShuffleManager extends Logging {
       log.debug(s"Can't use serialized shuffle for shuffle $shufId because the serializer, " +
         s"${dependency.serializer.getClass.getName}, does not support object relocation")
       false
-    } else if (dependency.aggregator.isDefined) { // Reduce端有聚合也不能走序列化的Handle
+    } else if (dependency.aggregator.isDefined) { // shuffle写和 shuffle 读两端没有聚合才有可能能用SerializedShuffleHandle
       log.debug(
         s"Can't use serialized shuffle for shuffle $shufId because an aggregator is defined")
       false
