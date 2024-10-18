@@ -179,7 +179,7 @@ private[spark] class MemoryStore(
    */
   private[storage] def putIteratorAsValues[T](
       blockId: BlockId,
-      values: Iterator[T],
+      values: Iterator[T],  // 前面的父迭代器
       classTag: ClassTag[T]): Either[PartiallyUnrolledIterator[T], Long] = {
 
     require(!contains(blockId), s"Block $blockId is already present in the MemoryStore")
@@ -346,8 +346,8 @@ private[spark] class MemoryStore(
     } else {
       initialMemoryThreshold.toInt
     }
-    val bbos = new ChunkedByteBufferOutputStream(chunkSize, allocator)
-    redirectableStream.setOutputStream(bbos)
+    val bbos = new ChunkedByteBufferOutputStream(chunkSize, allocator)  // 序列化的字节数组写入流
+    redirectableStream.setOutputStream(bbos)  // 重定向流, 下面序列化的情况用到了它
     val serializationStream: SerializationStream = {
       val autoPick = !blockId.isInstanceOf[StreamBlockId]
       val ser = serializerManager.getSerializer(classTag, autoPick).newInstance()
@@ -375,7 +375,7 @@ private[spark] class MemoryStore(
     }
 
     // Unroll this block safely, checking whether we have exceeded our threshold
-    while (values.hasNext && keepUnrolling) {
+    while (values.hasNext && keepUnrolling) {  // 这里这个父迭代器也会被触发, 数据流转
       serializationStream.writeObject(values.next())(classTag)
       elementsUnrolled += 1
       if (elementsUnrolled % memoryCheckPeriod == 0) {

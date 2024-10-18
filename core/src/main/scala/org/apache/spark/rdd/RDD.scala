@@ -283,9 +283,9 @@ abstract class RDD[T: ClassTag](
    */
   final def iterator(split: Partition, context: TaskContext): Iterator[T] = {
     if (storageLevel != StorageLevel.NONE) {  // 这个 if 条件的意思是做过 persist. 迭代器的数据可以来自三个地方: 跟前面的 RDD 实时去要的,从 persist 里面 get读取, 从checkpoint 读取
-      getOrCompute(split, context)
+      getOrCompute(split, context)  // 优先找 persist 的数据
     } else {
-      computeOrReadCheckpoint(split, context)
+      computeOrReadCheckpoint(split, context)  // 随后看 checkpoint, 然后是 compute
     }
   }
 
@@ -318,10 +318,10 @@ abstract class RDD[T: ClassTag](
    */
   private[spark] def computeOrReadCheckpoint(split: Partition, context: TaskContext): Iterator[T] =
   {
-    if (isCheckpointedAndMaterialized) {
+    if (isCheckpointedAndMaterialized) { // 先看看有没有做过 checkpoint
       firstParent[T].iterator(split, context)
     } else {
-      compute(split, context) // 模版方法,各中RDD有不同的 compute() 实现
+      compute(split, context) // 模版方法,各中RDD有不同的 compute() 实现, 可能调用前面的 RDD 的 iterator(), 例如MapPartitionsRDD 中: firstParent[T].iterator(split, context)
     }
   }
 
@@ -332,9 +332,9 @@ abstract class RDD[T: ClassTag](
     val blockId = RDDBlockId(id, partition.index) // id是RDD自己的编号。blockId = 几号、几区
     var readCachedBlock = true
     // This method is called on executors, so we need call SparkEnv.get instead of sc.env.
-    SparkEnv.get.blockManager.getOrElseUpdate(blockId, storageLevel, elementClassTag, () => { // iterator先从BlockManager中去取persist过的数据，去不到的话再动用这个函数读取checkpoint
+    SparkEnv.get.blockManager.getOrElseUpdate(blockId, storageLevel, elementClassTag, () => { // iterator先从BlockManager中去取persist过的数据，取不到的话再动用这个函数读取checkpoint
       readCachedBlock = false
-      computeOrReadCheckpoint(partition, context)
+      computeOrReadCheckpoint(partition, context)  // 也调了上层的 else 里的那个方法
     }) match {
       case Left(blockResult) =>
         if (readCachedBlock) {
@@ -1553,7 +1553,7 @@ abstract class RDD[T: ClassTag](
     if (context.checkpointDir.isEmpty) {
       throw new SparkException("Checkpoint directory has not been set in the SparkContext")
     } else if (checkpointData.isEmpty) {
-      checkpointData = Some(new ReliableRDDCheckpointData(this)) // 这里只是new了一个对象，使得checkpointData非空
+      checkpointData = Some(new ReliableRDDCheckpointData(this)) // 这里只是new了一个对象，使得checkpointData非空, 1742行会被检查是否为空 (foreach -> 一路 runJob -> doCheckpoint())
     }
   }
 
@@ -1749,7 +1749,7 @@ abstract class RDD[T: ClassTag](
           }
           checkpointData.get.checkpoint()
         } else {
-          dependencies.foreach(_.rdd.doCheckpoint())
+          dependencies.foreach(_.rdd.doCheckpoint())  // 如果当前的 RDD 没做过 checkpoint, 就一个劲的往前找, 直到有做过了的 RDD
         }
       }
     }

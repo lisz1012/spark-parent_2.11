@@ -171,7 +171,7 @@ private[spark] class SerializerManager(
     val byteStream = new BufferedOutputStream(outputStream)
     val autoPick = !blockId.isInstanceOf[StreamBlockId]
     val ser = getSerializer(implicitly[ClassTag[T]], autoPick).newInstance()
-    ser.serializeStream(wrapForCompression(blockId, byteStream)).writeAll(values).close()
+    ser.serializeStream(wrapForCompression(blockId, byteStream)).writeAll(values).close() // 用迭代器value迭代数据，然后写入
   }
 
   /** Serializes into a chunked byte buffer. */

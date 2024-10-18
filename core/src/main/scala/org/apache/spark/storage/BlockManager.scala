@@ -746,7 +746,7 @@ private[spark] class BlockManager(
       logInfo(s"Found block $blockId locally")
       return local
     }
-    val remote = getRemoteValues[T](blockId)
+    val remote = getRemoteValues[T](blockId)  // 从其他节点去拉取
     if (remote.isDefined) {
       logInfo(s"Found block $blockId remotely")
       return remote
@@ -801,14 +801,14 @@ private[spark] class BlockManager(
       makeIterator: () => Iterator[T]): Either[BlockResult, Iterator[T]] = {
     // Attempt to read the block from local or remote storage. If it's present, then we don't need
     // to go through the local-get-or-put path.
-    get[T](blockId)(classTag) match {
-      case Some(block) =>
+    get[T](blockId)(classTag) match {  // 进入 get 看检查数据的位置的顺序
+      case Some(block) =>  // 复用的时候才能取得到
         return Left(block)
-      case _ => // 第一次取不到，这段代码直接放空
+      case _ => // 第一次取不到，这段代码直接放空, 往下走, 进入 doPutIterator
         // Need to compute the block.
     }
     // Initially we hold no locks on this block.
-    doPutIterator(blockId, makeIterator, level, classTag, keepReadLock = true) match {
+    doPutIterator(blockId, makeIterator, level, classTag, keepReadLock = true) match { // 第一次执行的情况往里放数据
       case None =>
         // doPut() didn't hand work back to us, so the block already existed or was successfully
         // stored. Therefore, we now hold a read lock on the block.
@@ -1084,14 +1084,14 @@ private[spark] class BlockManager(
       keepReadLock: Boolean = false): Option[PartiallyUnrolledIterator[T]] = {
     doPut(blockId, level, classTag, tellMaster = tellMaster, keepReadLock = keepReadLock) { info => // 柯里化的调用，大括号里是第二个参数，只有第二个参数里面用到了iterator
       val startTimeMs = System.currentTimeMillis
-      var iteratorFromFailedMemoryStorePut: Option[PartiallyUnrolledIterator[T]] = None
+      var iteratorFromFailedMemoryStorePut: Option[PartiallyUnrolledIterator[T]] = None  // 存完数据之后返回iteratorFromFailedMemoryStorePut, 以供后面的 RDD 继续使用
       // Size of the block in bytes
       var size = 0L
       if (level.useMemory) {
         // Put it in memory first, even if it also has useDisk set to true;
         // We will drop it to disk later if the memory store can't hold it.
         if (level.deserialized) { // 没有序列化，直接放对象，然后返回iterator，以便任务的后半部分使用
-          memoryStore.putIteratorAsValues(blockId, iterator(), classTag) match {
+          memoryStore.putIteratorAsValues(blockId, iterator(), classTag) match { // 这个函数中用了 父iterator, 数据流转起来了
             case Right(s) =>
               size = s
             case Left(iter) =>
@@ -1126,10 +1126,10 @@ private[spark] class BlockManager(
           }
         }
 
-      } else if (level.useDisk) {
+      } else if (level.useDisk) {  // 用磁盘的情况
         diskStore.put(blockId) { channel =>
           val out = Channels.newOutputStream(channel)
-          serializerManager.dataSerializeStream(blockId, out, iterator())(classTag) // 还是会用到迭代器，next取完了接着写入磁盘
+          serializerManager.dataSerializeStream(blockId, out, iterator())(classTag) // 向磁盘写一定要序列化. 还是会用到迭代器，next取完了接着写入磁盘
         }
         size = diskStore.getSize(blockId)
       }

@@ -138,7 +138,7 @@ private[spark] object ReliableCheckpointRDD extends Logging {
       new SerializableConfiguration(sc.hadoopConfiguration))
     // TODO: This is expensive because it computes the RDD again unnecessarily (SPARK-8582)  -> 其实也没有那么贵，因为一般checkpoint之前都有persist或者cache（优化），则并不会一直往前面倒着遍历上游的RDD
     sc.runJob(originalRDD, // 把有执行过checkpoint()的（checkpointData isDefined = true）RDD作为参数，要前面的数据，并写到指定的持久化目录。这就是为什么checkpoint会触发（生成）一个job。
-      writePartitionToCheckpointFile[T](checkpointDirPath.toString, broadcastedConf) _)
+      writePartitionToCheckpointFile[T](checkpointDirPath.toString, broadcastedConf) _)  // 写到指定的缓存环境
 
     if (originalRDD.partitioner.nonEmpty) {
       writePartitionerToCheckpointDir(sc, originalRDD.partitioner.get, checkpointDirPath)
