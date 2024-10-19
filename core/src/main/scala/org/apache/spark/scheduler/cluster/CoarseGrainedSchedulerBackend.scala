@@ -269,13 +269,13 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
           val executorData = executorDataMap(executorId)
           val workOffers = IndexedSeq(
             new WorkerOffer(executorId, executorData.executorHost, executorData.freeCores))
-          scheduler.resourceOffers(workOffers)
+          scheduler.resourceOffers(workOffers)  // 这里其实还牵扯到一个 task 和 resource(也就是 executor) 绑定的过程, 但不是主干, 没讲
         } else {
           Seq.empty
         }
       }
       if (!taskDescs.isEmpty) {
-        launchTasks(taskDescs)
+        launchTasks(taskDescs)  // 当初直接跳过了前面的, 到了这里面
       }
     }
 
@@ -445,7 +445,7 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
   }
 
   override def reviveOffers() {
-    driverEndpoint.send(ReviveOffers)
+    driverEndpoint.send(ReviveOffers)  // send 对应 receive(), 去 receive()看去
   }
 
   override def killTask(

@@ -601,7 +601,7 @@ class DAGScheduler(
     assert(partitions.size > 0)
     val func2 = func.asInstanceOf[(TaskContext, Iterator[_]) => _]
     val waiter = new JobWaiter(this, jobId, partitions.size, resultHandler)
-    eventProcessLoop.post(JobSubmitted(
+    eventProcessLoop.post(JobSubmitted(  // 接着去看 1839 行的 JobSubmitted case 的处理
       jobId, rdd, func2, partitions.toArray, callSite, waiter,
       SerializationUtils.clone(properties)))
     waiter
@@ -864,7 +864,7 @@ class DAGScheduler(
     try {
       // New stage creation may throw an exception if, for example, jobs are run on a
       // HadoopRDD whose underlying HDFS files have been deleted.
-      finalStage = createResultStage(finalRDD, func, partitions, jobId, callSite)
+      finalStage = createResultStage(finalRDD, func, partitions, jobId, callSite)  // finalStage 的计算里面有递归
     } catch {
       case e: Exception =>
         logWarning("Creating new stage failed due to exception - job: " + jobId, e)
@@ -888,7 +888,7 @@ class DAGScheduler(
     val stageInfos = stageIds.flatMap(id => stageIdToStage.get(id).map(_.latestInfo))
     listenerBus.post(
       SparkListenerJobStart(job.jobId, jobSubmissionTime, stageInfos, properties))
-    submitStage(finalStage)
+    submitStage(finalStage)  // 开始 DAG 递归
   }
 
   private[scheduler] def handleMapStageSubmitted(jobId: Int,
@@ -940,11 +940,11 @@ class DAGScheduler(
     if (jobId.isDefined) {
       logDebug("submitStage(" + stage + ")")
       if (!waitingStages(stage) && !runningStages(stage) && !failedStages(stage)) {
-        val missing = getMissingParentStages(stage).sortBy(_.id)
+        val missing = getMissingParentStages(stage).sortBy(_.id)  // 这里面用栈做 BFS, 其实是个 DFS
         logDebug("missing: " + missing)
         if (missing.isEmpty) {
           logInfo("Submitting " + stage + " (" + stage.rdd + "), which has no missing parents")
-          submitMissingTasks(stage, jobId.get)
+          submitMissingTasks(stage, jobId.get)  // 到底了
         } else {
           for (parent <- missing) {
             submitStage(parent)
@@ -1015,7 +1015,7 @@ class DAGScheduler(
     // task gets a different copy of the RDD. This provides stronger isolation between tasks that
     // might modify state of objects referenced in their closures. This is necessary in Hadoop
     // where the JobConf/Configuration object is not thread-safe.
-    var taskBinary: Broadcast[Array[Byte]] = null
+    var taskBinary: Broadcast[Array[Byte]] = null  // taskBinary 是计算向数据移动中的计算逻辑, 要广播出去,1039 行
     var partitions: Array[Partition] = null
     try {
       // For ShuffleMapTask, serialize and broadcast (rdd, shuffleDep).
@@ -1036,7 +1036,7 @@ class DAGScheduler(
         partitions = stage.rdd.partitions
       }
 
-      taskBinary = sc.broadcast(taskBinaryBytes) // 一旦Driver的sparkContext调用了broadcast存储层，其他的Executor也可以取到这些逻辑代码。MapReduce中是通过反射的方式得到Mapper和Reducer的对象，但是spark中是通过序列化反序列化拿到业务逻辑的。RDD、dependency等要序列化成字节数组，然后被广播出去
+      taskBinary = sc.broadcast(taskBinaryBytes) // 一旦Driver的sparkContext调用了broadcast存储层，其他的Executor也可以取到这些逻辑代码。MapReduce中是通过反射的方式得到Mapper和Reducer的对象，但是spark中是通过序列化反序列化拿到业务逻辑的。RDD、dependency等要序列化成字节数组，然后被广播出去.和广播变量是一样的处理方式
     } catch {
       // In the case of a failure during serialization, abort the stage.
       case e: NotSerializableException =>
@@ -1782,7 +1782,7 @@ class DAGScheduler(
     // If the RDD has narrow dependencies, pick the first partition of the first narrow dependency
     // that has any placement preferences. Ideally we would choose based on transfer sizes,
     // but this will do for now.
-    rdd.dependencies.foreach {
+    rdd.dependencies.foreach {  // 窄依赖就是还没有递归完
       case n: NarrowDependency[_] =>
         for (inPart <- n.getParents(partition)) {
           val locs = getPreferredLocsInternal(n.rdd, inPart, visited)
