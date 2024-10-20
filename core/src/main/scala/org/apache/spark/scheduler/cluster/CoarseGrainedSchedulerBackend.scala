@@ -308,7 +308,7 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
           logDebug(s"Launching task ${task.taskId} on executor id: ${task.executorId} hostname: " +
             s"${executorData.executorHost}.")
 
-          executorData.executorEndpoint.send(LaunchTask(new SerializableBuffer(serializedTask))) // 给Executor发消息启动任务
+          executorData.executorEndpoint.send(LaunchTask(new SerializableBuffer(serializedTask))) // 给Executor发消息启动任务, 试试到receive()里面去看接收?
         }
       }
     }
