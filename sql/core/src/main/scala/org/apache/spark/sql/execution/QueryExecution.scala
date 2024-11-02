@@ -39,12 +39,12 @@ import org.apache.spark.util.Utils
  * While this is not a public class, we should avoid changing the function names for the sake of
  * changing them, because a lot of developers use the feature for debugging.
  */
-class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
+class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) { // 为什么一堆懒惰的小伙伴? 因为是分布式的计算, 不能立即触发
 
   // TODO: Move the planner an optimizer into here from SessionState.
   protected def planner = sparkSession.sessionState.planner
 
-  def assertAnalyzed(): Unit = analyzed // analyze做的事元数据的捆绑
+  def assertAnalyzed(): Unit = analyzed // analyze做的事元数据的捆绑, 这个 analyzed 会在Dataset 得到对象的时候被执行
 
   def assertSupported(): Unit = {
     if (sparkSession.sessionState.conf.isUnsupportedOperationCheckEnabled) {
@@ -54,7 +54,7 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
 
   lazy val analyzed: LogicalPlan = {
     SparkSession.setActiveSession(sparkSession)
-    sparkSession.sessionState.analyzer.executeAndCheck(logical)
+    sparkSession.sessionState.analyzer.executeAndCheck(logical) // 看到了没? SessionState 中的 analyzer被用来做绑定元数据
   }
 
   lazy val withCachedData: LogicalPlan = {
@@ -63,7 +63,7 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
     sparkSession.sharedState.cacheManager.useCachedData(analyzed)
   }
 
-  lazy val optimizedPlan: LogicalPlan = sparkSession.sessionState.optimizer.execute(withCachedData)
+  lazy val optimizedPlan: LogicalPlan = sparkSession.sessionState.optimizer.execute(withCachedData) // 到这里还是逻辑执行计划
 
   lazy val sparkPlan: SparkPlan = {
     SparkSession.setActiveSession(sparkSession)
@@ -74,10 +74,10 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
 
   // executedPlan should not be used to initialize any SparkPlan. It should be
   // only used for execution.
-  lazy val executedPlan: SparkPlan = prepareForExecution(sparkPlan)
+  lazy val executedPlan: SparkPlan = prepareForExecution(sparkPlan)  // 可执行的物理执行计划
 
   /** Internal version of the RDD. Avoids copies and has no schema */
-  lazy val toRdd: RDD[InternalRow] = executedPlan.execute()
+  lazy val toRdd: RDD[InternalRow] = executedPlan.execute()  // 得到 RDD 了, 回归到 spark core
 
   /**
    * Prepares a planned [[SparkPlan]] for execution by inserting shuffle operations and internal

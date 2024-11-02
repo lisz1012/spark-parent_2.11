@@ -74,7 +74,7 @@ import org.apache.spark.util.{CallSite, Utils}
  *                            views, SQL config, UDFs etc) from parent.
  */
 @InterfaceStability.Stable
-class SparkSession private(
+class SparkSession private( // 下面的 141 行有裸露代码
     @transient val sparkContext: SparkContext,
     @transient private val existingSharedState: Option[SharedState],
     @transient private val parentSessionState: Option[SessionState],
@@ -138,7 +138,7 @@ class SparkSession private(
    */
   @InterfaceStability.Unstable
   @transient
-  lazy val sessionState: SessionState = {
+  lazy val sessionState: SessionState = {  //  SparkSession 的裸露的代码中把 SessionState 创建出来了
     parentSessionState
       .map(_.clone(this))
       .getOrElse {
@@ -429,7 +429,7 @@ class SparkSession private(
    * @since 2.0.0
    */
   def baseRelationToDataFrame(baseRelation: BaseRelation): DataFrame = {
-    Dataset.ofRows(self, LogicalRelation(baseRelation))
+    Dataset.ofRows(self, LogicalRelation(baseRelation))  // baseRelation 是 HadoopFsRelation
   }
 
   /* ------------------------------- *
@@ -898,7 +898,7 @@ object SparkSession extends Logging {
      *
      * @since 2.0.0
      */
-    def getOrCreate(): SparkSession = synchronized {
+    def getOrCreate(): SparkSession = synchronized { // 注意 956 行
       // Get the session from current thread's active session.
       var session = activeThreadSession.get()
       if ((session ne null) && !session.sparkContext.isStopped) {
@@ -1063,7 +1063,7 @@ object SparkSession extends Logging {
       // invoke `new [Hive]SessionStateBuilder(SparkSession, Option[SessionState])`
       val clazz = Utils.classForName(className)
       val ctor = clazz.getConstructors.head
-      ctor.newInstance(sparkSession, None).asInstanceOf[BaseSessionStateBuilder].build()
+      ctor.newInstance(sparkSession, None).asInstanceOf[BaseSessionStateBuilder].build() // build 中 new 的传参列表很大, 看一下
     } catch {
       case NonFatal(e) =>
         throw new IllegalArgumentException(s"Error while instantiating '$className':", e)

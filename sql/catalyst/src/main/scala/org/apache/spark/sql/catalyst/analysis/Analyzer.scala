@@ -90,7 +90,7 @@ object AnalysisContext {
  * [[UnresolvedRelation]]s into fully typed objects using information in a [[SessionCatalog]].
  */
 class Analyzer(
-    catalog: SessionCatalog,
+    catalog: SessionCatalog,  // catalog 里面有所有元数据
     conf: SQLConf,
     maxIterations: Int)
   extends RuleExecutor[LogicalPlan] with CheckAnalysis {
@@ -115,7 +115,7 @@ class Analyzer(
   override def execute(plan: LogicalPlan): LogicalPlan = {
     AnalysisContext.reset()
     try {
-      executeSameContext(plan)
+      executeSameContext(plan)  // 看这个
     } finally {
       AnalysisContext.reset()
     }
@@ -152,7 +152,7 @@ class Analyzer(
       new SubstituteUnresolvedOrdinals(conf)),
     Batch("Resolution", fixedPoint,
       ResolveTableValuedFunctions ::
-      ResolveRelations ::
+      ResolveRelations ::  // 看这个, 关联 catalog 元数据
       ResolveReferences ::
       ResolveCreateNamedStruct ::
       ResolveDeserializer ::
@@ -581,7 +581,7 @@ class Analyzer(
   /**
    * Replaces [[UnresolvedRelation]]s with concrete relations from the catalog.
    */
-  object ResolveRelations extends Rule[LogicalPlan] {
+  object ResolveRelations extends Rule[LogicalPlan] {  // 看resolveRelation方法
 
     // If the unresolved relation is running directly on files, we just return the original
     // UnresolvedRelation, the plan will get resolved later. Else we look up the table from catalog
@@ -612,7 +612,7 @@ class Analyzer(
     def resolveRelation(plan: LogicalPlan): LogicalPlan = plan match {
       case u: UnresolvedRelation if !isRunningDirectlyOnFiles(u.tableIdentifier) =>
         val defaultDatabase = AnalysisContext.get.defaultDatabase
-        val foundRelation = lookupTableFromCatalog(u, defaultDatabase)
+        val foundRelation = lookupTableFromCatalog(u, defaultDatabase) // 元数据
         resolveRelation(foundRelation)
       // The view's child should be a logical plan parsed from the `desc.viewText`, the variable
       // `viewText` should be defined, or else we throw an error on the generation of the View

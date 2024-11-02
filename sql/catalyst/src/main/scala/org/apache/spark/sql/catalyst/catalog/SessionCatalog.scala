@@ -666,7 +666,7 @@ class SessionCatalog(
     synchronized {
       val db = formatDatabaseName(name.database.getOrElse(currentDb)) // 从SQL语句字符串中取得库名
       val table = formatTableName(name.table) // 从SQL语句字符串中取得表名
-      if (db == globalTempViewManager.database) { // 从全局的Spark SQL的引擎中去找，有没有这个库
+      if (db == globalTempViewManager.database) { // 从全局的Spark SQL的引擎中去找，有没有这个库. 这个 if 是本地有 tempViews 的情况
         globalTempViewManager.get(table).map { viewDef =>
           SubqueryAlias(table, viewDef)
         }.getOrElse(throw new NoSuchTableException(db, table))

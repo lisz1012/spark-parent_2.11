@@ -282,21 +282,21 @@ abstract class BaseSessionStateBuilder(
    * Build the [[SessionState]].
    */
   def build(): SessionState = {
-    new SessionState(
+    new SessionState(  // 追进去, 里面有裸露的小伙伴
       session.sharedState,
       conf,
       experimentalMethods,
       functionRegistry,
       udfRegistration,
       () => catalog,
-      sqlParser,
-      () => analyzer,
-      () => optimizer,
-      planner,
+      sqlParser,                 // 用来生成抽语树, antlr V4
+      () => analyzer,            // 参考元数据, 进行元数据绑定和转换
+      () => optimizer,           // 最好读文件的时候就进行行的减少过滤和列的裁剪(列式存储就比较爽)
+      planner,                   // 生成物理计划, 逻辑到物理的转换
       streamingQueryManager,
       listenerManager,
       () => resourceLoader,
-      createQueryExecution,
+      createQueryExecution,     // plan=> new QueryExecution(session, plan)
       createClone)
   }
 }

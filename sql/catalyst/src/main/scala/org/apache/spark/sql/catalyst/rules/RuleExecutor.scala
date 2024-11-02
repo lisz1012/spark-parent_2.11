@@ -81,10 +81,10 @@ abstract class RuleExecutor[TreeType <: TreeNode[_]] extends Logging {
 
       // Run until fix point (or the max number of iterations as specified in the strategy.
       while (continue) {
-        curPlan = batch.rules.foldLeft(curPlan) {
+        curPlan = batch.rules.foldLeft(curPlan) { // 用规则处理, 处理 curPlan. 看 Analyzer 类(是一个子类)的 batches 变量
           case (plan, rule) =>
             val startTime = System.nanoTime()
-            val result = rule(plan)
+            val result = rule(plan)  // 规则匹配上了走这里
             val runTime = System.nanoTime() - startTime
 
             if (!result.fastEquals(plan)) {

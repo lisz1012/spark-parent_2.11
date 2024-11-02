@@ -45,7 +45,7 @@ import org.apache.spark.unsafe.types.UTF8String
  * @since 1.4.0
  */
 @InterfaceStability.Stable
-class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
+class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging { // 看下面 700 行的 textFile 方法
 
   /**
    * Specifies the input data source format.
@@ -53,7 +53,7 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
    * @since 1.4.0
    */
   def format(source: String): DataFrameReader = {
-    this.source = source
+    this.source = source  // 可以用它来推断输入格式化类
     this
   }
 
@@ -181,7 +181,7 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
    * @since 1.6.0
    */
   @scala.annotation.varargs
-  def load(paths: String*): DataFrame = {
+  def load(paths: String*): DataFrame = { // 222, 227 行
     if (source.toLowerCase(Locale.ROOT) == DDLUtils.HIVE_PROVIDER) {
       throw new AnalysisException("Hive data source can only be used with tables, you can not " +
         "read files of Hive data source directly.")
@@ -235,8 +235,8 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
         sparkSession,
         paths = paths,
         userSpecifiedSchema = userSpecifiedSchema,
-        className = source,
-        options = extraOptions.toMap).resolveRelation())
+        className = source,    // source 指定了输入格式化类
+        options = extraOptions.toMap).resolveRelation()) // 返回一个 HadoopFsRelation
   }
 
   /**
@@ -697,7 +697,7 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
    * other overloaded `textFile()` method for more details.
    * @since 2.0.0
    */
-  def textFile(path: String): Dataset[String] = {
+  def textFile(path: String): Dataset[String] = {  // read().textFile() 的时候用到的
     // This method ensures that calls that explicit need single argument works, see SPARK-16009
     textFile(Seq(path): _*)
   }

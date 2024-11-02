@@ -70,7 +70,7 @@ private[sql] class SessionState(
     val streamingQueryManager: StreamingQueryManager,
     val listenerManager: ExecutionListenerManager,
     resourceLoaderBuilder: () => SessionResourceLoader,
-    createQueryExecution: LogicalPlan => QueryExecution,
+    createQueryExecution: LogicalPlan => QueryExecution,  // 看 Session 的生成过程, 得到 QueryExecution的参数值
     createClone: (SparkSession, SessionState) => SessionState) {
 
   // The following fields are lazy to avoid creating the Hive client when creating SessionState.
@@ -105,7 +105,7 @@ private[sql] class SessionState(
   //  Helper methods, partially leftover from pre-2.0 days
   // ------------------------------------------------------
 
-  def executePlan(plan: LogicalPlan): QueryExecution = createQueryExecution(plan)
+  def executePlan(plan: LogicalPlan): QueryExecution = createQueryExecution(plan)  // 是个函数: plan => new QueryExecution(session, plan), new 的时候构造里面lazy的东西还没执行
 
   def refreshTable(tableName: String): Unit = {
     catalog.refreshTable(sqlParser.parseTableIdentifier(tableName))

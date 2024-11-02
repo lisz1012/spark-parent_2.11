@@ -70,7 +70,7 @@ private[sql] object Dataset {
   }
 
   def ofRows(sparkSession: SparkSession, logicalPlan: LogicalPlan): DataFrame = {
-    val qe = sparkSession.sessionState.executePlan(logicalPlan) // 懒惰的小伙伴们不会被执行
+    val qe = sparkSession.sessionState.executePlan(logicalPlan) // 懒惰的小伙伴们不会被执行. 这个logicalPlan其实是一个 HadoopFsRelation
     qe.assertAnalyzed()
     new Dataset[Row](sparkSession, qe, RowEncoder(qe.analyzed.schema)) // Dataset需要一个QuerExecution，QE需要一个logicalPlan
   }
@@ -175,7 +175,7 @@ class Dataset[T] private[sql](
   // you wrap it with `withNewExecutionId` if this actions doesn't call other action.
 
   def this(sparkSession: SparkSession, logicalPlan: LogicalPlan, encoder: Encoder[T]) = {
-    this(sparkSession, sparkSession.sessionState.executePlan(logicalPlan), encoder)
+    this(sparkSession, sparkSession.sessionState.executePlan(logicalPlan), encoder)  // 每次生成下一个 Dataset 的时候都会通过executePlan()生成一个新的QueryExecution, 传给新的 Dataset
   }
 
   def this(sqlContext: SQLContext, logicalPlan: LogicalPlan, encoder: Encoder[T]) = {
@@ -185,7 +185,7 @@ class Dataset[T] private[sql](
   @transient private[sql] val logicalPlan: LogicalPlan = {
     // For various commands (like DDL) and queries with side effects, we force query execution
     // to happen right away to let these side effects take place eagerly.
-    queryExecution.analyzed match {
+    queryExecution.analyzed match {  // queryExecution.analyzed点进去就会发现是一个LogicalPlan, 贴源的就是 HadoopFsRelation
       case c: Command =>
         LocalRelation(c.output, withAction("command", queryExecution)(_.executeCollect()))
       case u @ Union(children) if children.forall(_.isInstanceOf[Command]) =>
@@ -251,7 +251,7 @@ class Dataset[T] private[sql](
         Column(col).cast(StringType)
       }
     }
-    val takeResult = newDf.select(castCols: _*).take(numRows + 1)
+    val takeResult = newDf.select(castCols: _*).take(numRows + 1)  // 进入 take 看
     val hasMoreData = takeResult.length > numRows
     val data = takeResult.take(numRows)
 
@@ -1467,7 +1467,7 @@ class Dataset[T] private[sql](
    * @since 1.6.0
    */
   def filter(condition: Column): Dataset[T] = withTypedPlan { // filter的方法体是指向了另外的一个方法： withTypedPlan,Filter会作为参数传给withTypedPlan，这里的大括号可以写成小括号。Filter是一个样例类
-    Filter(condition.expr, planWithBarrier)
+    Filter(condition.expr, planWithBarrier)  // planWithBarrier 包含了 QueryExecution, 也就包含了 数据源的数据 HadoopFsRelation, 加上前面的condition.expr 就是一个过滤结果, 形成一个新的 Dataset
   }
 
   /**
@@ -2492,7 +2492,7 @@ class Dataset[T] private[sql](
    * @group action
    * @since 1.6.0
    */
-  def head(n: Int): Array[T] = withAction("head", limit(n).queryExecution)(collectFromPlan) //collectFromPlan 是以函数作为参数
+  def head(n: Int): Array[T] = withAction("head", limit(n).queryExecution)(collectFromPlan) //collectFromPlan 是以柯里化函数作为参数
 
   /**
    * Returns the first row.
@@ -3262,7 +3262,7 @@ class Dataset[T] private[sql](
       }
       val start = System.nanoTime()
       val result = SQLExecution.withNewExecutionId(sparkSession, qe) {
-        action(qe.executedPlan)
+        action(qe.executedPlan)  // lazy 的小伙伴被执行了, 得到物理执行计划, 灵魂对象是 qe
       }
       val end = System.nanoTime()
       sparkSession.listenerManager.onSuccess(name, qe, end - start)
@@ -3277,11 +3277,11 @@ class Dataset[T] private[sql](
   /**
    * Collect all elements from a spark plan.
    */
-  private def collectFromPlan(plan: SparkPlan): Array[T] = { // 参数是物理执行计划
+  private def collectFromPlan(plan: SparkPlan): Array[T] = { // 参数是物理执行计划. Plan 是 qe.executrePlan 的时候得到的
     // This projection writes output to a `InternalRow`, which means applying this projection is not
     // thread-safe. Here we create the projection inside this method to make `Dataset` thread-safe.
     val objProj = GenerateSafeProjection.generate(deserializer :: Nil)
-    plan.executeCollect().map { row =>
+    plan.executeCollect().map { row =>  // 物理执行计划开始执行了, 点进executeCollect, 选 SparkPlan
       // The row returned by SafeProjection is `SpecificInternalRow`, which ignore the data type
       // parameter of its `get` method, so it's safe to use null here.
       objProj(row).get(0, null).asInstanceOf[T]

@@ -244,7 +244,7 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
    * compressed.
    */
   private def getByteArrayRdd(n: Int = -1): RDD[(Long, Array[Byte])] = {
-    execute().mapPartitionsInternal { iter =>
+    execute().mapPartitionsInternal { iter =>  // execute()里面会得到 RDD
       var count = 0
       val buffer = new Array[Byte](4 << 10)  // 4K
       val codec = CompressionCodec.createCodec(SparkEnv.get.conf)
@@ -294,7 +294,7 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
     val byteArrayRdd = getByteArrayRdd() // 得到RDD了
 
     val results = ArrayBuffer[InternalRow]()
-    byteArrayRdd.collect().foreach { countAndBytes => // collect是执行算子. DAG 在 Driver上，优化：如果上下游的RDD的分区器和分区数一样，那么即便他们之间用了shuffle算子，也屏蔽这次shuffle，不做数据的移动。想优化shuffle 而shuffle一定会产生磁盘和网络IO。又因为IO是计算机的瓶颈。如果数据源是个parquet，还能减少读取数据的IO
+    byteArrayRdd.collect().foreach { countAndBytes => // collect是执行算子, 和 spark core 勾上了. DAG 在 Driver上，优化：如果上下游的RDD的分区器和分区数一样，那么即便他们之间用了shuffle算子，也屏蔽这次shuffle，不做数据的移动。想优化shuffle 而shuffle一定会产生磁盘和网络IO。又因为IO是计算机的瓶颈。如果数据源是个parquet，还能减少读取数据的IO
       decodeUnsafeRows(countAndBytes._2).foreach(results.+=)
     }
     results.toArray

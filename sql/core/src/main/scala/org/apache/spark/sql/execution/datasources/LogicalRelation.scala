@@ -32,7 +32,7 @@ case class LogicalRelation(
     output: Seq[AttributeReference],
     catalogTable: Option[CatalogTable],
     override val isStreaming: Boolean)
-  extends LeafNode with MultiInstanceRelation {
+  extends LeafNode with MultiInstanceRelation { // 这里就能看到抽语树的影子了
 
   // Only care about relation when canonicalizing.
   override def doCanonicalize(): LogicalPlan = copy(

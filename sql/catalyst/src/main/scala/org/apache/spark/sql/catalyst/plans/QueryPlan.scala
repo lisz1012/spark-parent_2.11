@@ -22,7 +22,7 @@ import org.apache.spark.sql.catalyst.trees.{CurrentOrigin, TreeNode}
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types.{DataType, StructType}
 
-abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanType] {
+abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanType] { // 子类有 LogicalPlan 和 SparkPlan, 逻辑和物理执行计划.逻辑执行计划是一棵树, 后来会反转成物理执行计划, 也是一棵树
   self: PlanType =>
 
   /**
