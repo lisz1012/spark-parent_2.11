@@ -32,7 +32,7 @@ import org.apache.spark.util.ThreadUtils
 import org.apache.spark.util.random.{BernoulliCellSampler, PoissonSampler}
 
 /** Physical plan for Project. */
-case class ProjectExec(projectList: Seq[NamedExpression], child: SparkPlan)
+case class ProjectExec(projectList: Seq[NamedExpression], child: SparkPlan)  // 关注 doExecute()方法: 69, 211 行. 在其中终于看到了 RDD
   extends UnaryExecNode with CodegenSupport {
 
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
@@ -210,10 +210,10 @@ case class FilterExec(condition: Expression, child: SparkPlan)
 
   protected override def doExecute(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")
-    child.execute().mapPartitionsWithIndexInternal { (index, iter) => // 子查询。从结果到源的逆推过程。回归的时候嵌入算子。index是指第几号分区，iter是指第几号迭代器
+    child.execute().mapPartitionsWithIndexInternal { (index, iter) => // 子查询。从结果到源的逆推过程。回归的时候嵌入算子。index是指第几号分区，iter是指第几号迭代器, 子查询的 execute 又会调它的 doExecute, 其中还会检查子查询, 直到没有子查询了
       val predicate = newPredicate(condition, child.output)
       predicate.initialize(0)
-      iter.filter { row =>                                            // 回溯RDD单链表
+      iter.filter { row =>                                            // 回溯RDD单链表, 这个 filter 是 scala 处理集合的 filter
         val r = predicate.eval(row)
         if (r) numOutputRows += 1
         r

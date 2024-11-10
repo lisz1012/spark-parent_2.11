@@ -50,7 +50,7 @@ import org.apache.spark.util.Utils
  * @param partitionPruningPred An optional partition pruning predicate for partitioned table.
  */
 private[hive]
-case class HiveTableScanExec(
+case class HiveTableScanExec(  // 贴源的, 但他也会实现 doExecute()方法: 181 行
     requestedAttributes: Seq[Attribute],
     relation: HiveTableRelation,
     partitionPruningPred: Seq[Expression])(
@@ -178,7 +178,7 @@ case class HiveTableScanExec(
     prunedPartitions.map(HiveClientImpl.toHivePartition(_, hiveQlTable))
   }
 
-  protected override def doExecute(): RDD[InternalRow] = {
+  protected override def doExecute(): RDD[InternalRow] = {  // 贴源了就不会再调用child 子查询的 execute()方法了
     // Using dummyCallSite, as getCallSite can turn out to be expensive with
     // with multiple partitions.
     val rdd = if (!relation.isPartitioned) {

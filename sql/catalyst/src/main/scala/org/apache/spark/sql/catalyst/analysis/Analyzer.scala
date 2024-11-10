@@ -100,7 +100,7 @@ class Analyzer(
   }
 
   def executeAndCheck(plan: LogicalPlan): LogicalPlan = {
-    val analyzed = execute(plan)
+    val analyzed = execute(plan)  // 看这里绑定元数据
     try {
       checkAnalysis(analyzed)
       EliminateBarriers(analyzed)
@@ -581,7 +581,7 @@ class Analyzer(
   /**
    * Replaces [[UnresolvedRelation]]s with concrete relations from the catalog.
    */
-  object ResolveRelations extends Rule[LogicalPlan] {  // 看resolveRelation方法
+  object ResolveRelations extends Rule[LogicalPlan] {  // 类名会调用 apply 方法, 看 apply然后看resolveRelation方法
 
     // If the unresolved relation is running directly on files, we just return the original
     // UnresolvedRelation, the plan will get resolved later. Else we look up the table from catalog

@@ -71,7 +71,7 @@ private[sql] object Dataset {
 
   def ofRows(sparkSession: SparkSession, logicalPlan: LogicalPlan): DataFrame = {
     val qe = sparkSession.sessionState.executePlan(logicalPlan) // 懒惰的小伙伴们不会被执行. 这个logicalPlan其实是一个 HadoopFsRelation
-    qe.assertAnalyzed()
+    qe.assertAnalyzed()  // 里面调用了 analyzed, 这时他不能再懒着了, 要去做预案数据的捆绑
     new Dataset[Row](sparkSession, qe, RowEncoder(qe.analyzed.schema)) // Dataset需要一个QuerExecution，QE需要一个logicalPlan
   }
 }
@@ -2492,7 +2492,7 @@ class Dataset[T] private[sql](
    * @group action
    * @since 1.6.0
    */
-  def head(n: Int): Array[T] = withAction("head", limit(n).queryExecution)(collectFromPlan) //collectFromPlan 是以柯里化函数作为参数
+  def head(n: Int): Array[T] = withAction("head", limit(n).queryExecution)(collectFromPlan) //withAction 是 action算子. collectFromPlan 是以柯里化函数作为参数
 
   /**
    * Returns the first row.
@@ -3262,7 +3262,7 @@ class Dataset[T] private[sql](
       }
       val start = System.nanoTime()
       val result = SQLExecution.withNewExecutionId(sparkSession, qe) {
-        action(qe.executedPlan)  // lazy 的小伙伴被执行了, 得到物理执行计划, 灵魂对象是 qe
+        action(qe.executedPlan)  // lazy 的小伙伴被执行了, 得到物理执行计划, 灵魂对象是 qe, executedPlan的调用会把一连串懒惰的小伙伴都追溯执行起来, qe.executedPlan 是物理执行计划. 看完 qe.executePlan 再看 action, 2495 行的 collectFromPlan
       }
       val end = System.nanoTime()
       sparkSession.listenerManager.onSuccess(name, qe, end - start)
@@ -3277,7 +3277,7 @@ class Dataset[T] private[sql](
   /**
    * Collect all elements from a spark plan.
    */
-  private def collectFromPlan(plan: SparkPlan): Array[T] = { // 参数是物理执行计划. Plan 是 qe.executrePlan 的时候得到的
+  private def collectFromPlan(plan: SparkPlan): Array[T] = { // 回收算子, 参数是物理执行计划. Plan 是 qe.executrePlan 的时候得到的
     // This projection writes output to a `InternalRow`, which means applying this projection is not
     // thread-safe. Here we create the projection inside this method to make `Dataset` thread-safe.
     val objProj = GenerateSafeProjection.generate(deserializer :: Nil)
@@ -3309,7 +3309,7 @@ class Dataset[T] private[sql](
 
   /** A convenient function to wrap a logical plan and produce a Dataset. */
   @inline private def withTypedPlan[U : Encoder](logicalPlan: LogicalPlan): Dataset[U] = {
-    Dataset(sparkSession, logicalPlan) // 之前的QueryExecution
+    Dataset(sparkSession, logicalPlan) // 之前的QueryExecution, QueryExecution 里面有logicalPlan, logicalPlan衔接了各个 上下游的Dataset
   }
 
   /** A convenient function to wrap a set based logical plan and produce a Dataset. */

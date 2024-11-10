@@ -54,13 +54,13 @@ abstract class GenericStrategy[PhysicalPlan <: TreeNode[PhysicalPlan]] extends L
  */
 abstract class QueryPlanner[PhysicalPlan <: TreeNode[PhysicalPlan]] {
   /** A list of execution strategies that can be used by the planner */
-  def strategies: Seq[GenericStrategy[PhysicalPlan]]
+  def strategies: Seq[GenericStrategy[PhysicalPlan]]  // 这里并没有实现, 所以一定会在子类SparkPlanner中实现, 有点像之前的 batches
 
-  def plan(plan: LogicalPlan): Iterator[PhysicalPlan] = {
+  def plan(plan: LogicalPlan): Iterator[PhysicalPlan] = {  // 传进来的是一个优化过的逻辑计划, 返回的是物理计划, 在外面的名字是 SparkPlan
     // Obviously a lot to do here still...
 
     // Collect physical plan candidates.
-    val candidates = strategies.iterator.flatMap(_(plan))
+    val candidates = strategies.iterator.flatMap(_(plan))  // 用迭代出的元素接收 plan
 
     // The candidates may contain placeholders marked as [[planLater]],
     // so try to replace them by their child plans.

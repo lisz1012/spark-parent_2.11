@@ -43,7 +43,7 @@ class SparkPlanner(
       Aggregation ::
       JoinSelection ::
       InMemoryScans ::
-      BasicOperators :: Nil)
+      BasicOperators :: Nil)  // 看这个, 其实每个的 apply 都会接受一个 plan 作为参数, 因为外面调他的时候调用了.iterator.flatMap(_.apply(plan))
 
   /**
    * Override to add extra planning strategies to the planner. These strategies are tried after

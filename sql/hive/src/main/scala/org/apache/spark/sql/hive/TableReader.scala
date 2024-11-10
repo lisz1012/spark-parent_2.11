@@ -119,13 +119,13 @@ class HadoopTableReader(
     val localTableDesc = tableDesc
     val broadcastedHadoopConf = _broadcastedHadoopConf
 
-    val tablePath = hiveTable.getPath
+    val tablePath = hiveTable.getPath   // 定义 Hive 表的时候, 会给出 location 路径
     val inputPathStr = applyFilterIfNeeded(tablePath, filterOpt)
 
     // logDebug("Table input: %s".format(tablePath))
-    val ifc = hiveTable.getInputFormatClass
+    val ifc = hiveTable.getInputFormatClass   // 输入格式化类
       .asInstanceOf[java.lang.Class[InputFormat[Writable, Writable]]]
-    val hadoopRDD = createHadoopRdd(localTableDesc, inputPathStr, ifc)
+    val hadoopRDD = createHadoopRdd(localTableDesc, inputPathStr, ifc)  // 创建 HadoopRDD
 
     val attrsWithIndex = attributes.zipWithIndex
     val mutableRow = new SpecificInternalRow(attributes.map(_.dataType))
@@ -299,7 +299,7 @@ class HadoopTableReader(
 
     val initializeJobConfFunc = HadoopTableReader.initializeLocalJobConfFunc(path, tableDesc) _
 
-    val rdd = new HadoopRDD(
+    val rdd = new HadoopRDD(   // hive 表的贴源执行计划用了 HadoopRDD,和 core 里面的内容勾上了
       sparkSession.sparkContext,
       _broadcastedHadoopConf.asInstanceOf[Broadcast[SerializableConfiguration]],
       Some(initializeJobConfFunc),
@@ -309,7 +309,7 @@ class HadoopTableReader(
       _minSplitsPerRDD)
 
     // Only take the value (skip the key) because Hive works only with values.
-    rdd.map(_._2)
+    rdd.map(_._2)  // 只取 value 不取那个 LongWritable 类型的偏移量
   }
 }
 

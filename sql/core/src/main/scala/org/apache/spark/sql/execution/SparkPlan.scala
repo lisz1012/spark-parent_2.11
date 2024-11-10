@@ -128,7 +128,7 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
     if (isCanonicalizedPlan) {
       throw new IllegalStateException("A canonicalized plan is not supposed to be executed.")
     }
-    doExecute()
+    doExecute()  // doExecute 被调起了, 例如在ProjectExec中的 doExecute()实现. 生成了 RDD
   }
 
   /**
@@ -244,7 +244,7 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
    * compressed.
    */
   private def getByteArrayRdd(n: Int = -1): RDD[(Long, Array[Byte])] = {
-    execute().mapPartitionsInternal { iter =>  // execute()里面会得到 RDD
+    execute().mapPartitionsInternal { iter =>  // execute()里面会得到 RDD, 还记得吧? 里面调用了 doExecute(), 贴源的比如 HiveTableScanExec 就返回 HadoopRDD, 还有子查询就继续掉 child 的 execute()`
       var count = 0
       val buffer = new Array[Byte](4 << 10)  // 4K
       val codec = CompressionCodec.createCodec(SparkEnv.get.conf)
@@ -294,7 +294,7 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
     val byteArrayRdd = getByteArrayRdd() // 得到RDD了
 
     val results = ArrayBuffer[InternalRow]()
-    byteArrayRdd.collect().foreach { countAndBytes => // collect是执行算子, 和 spark core 勾上了. DAG 在 Driver上，优化：如果上下游的RDD的分区器和分区数一样，那么即便他们之间用了shuffle算子，也屏蔽这次shuffle，不做数据的移动。想优化shuffle 而shuffle一定会产生磁盘和网络IO。又因为IO是计算机的瓶颈。如果数据源是个parquet，还能减少读取数据的IO
+    byteArrayRdd.collect().foreach { countAndBytes => // collect是执行算子, 在 RDD 身上.出来的, 这就和 spark core 勾上了. DAG 在 Driver上，优化：如果上下游的RDD的分区器和分区数一样，那么即便他们之间用了shuffle算子，也屏蔽这次shuffle，不做数据的移动。想优化shuffle 而shuffle一定会产生磁盘和网络IO。又因为IO是计算机的瓶颈。如果数据源是个parquet，还能减少读取数据的IO
       decodeUnsafeRows(countAndBytes._2).foreach(results.+=)
     }
     results.toArray
@@ -396,7 +396,7 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
   }
 
   protected def newPredicate(
-      expression: Expression, inputSchema: Seq[Attribute]): GenPredicate = {
+      expression: Expression, inputSchema: Seq[Attribute]): GenPredicate = {  // expression 可以是"age > 30" 这种条件语句
     try {
       GeneratePredicate.generate(expression, inputSchema)
     } catch {

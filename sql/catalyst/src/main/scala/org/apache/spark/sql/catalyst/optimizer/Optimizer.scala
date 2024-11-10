@@ -56,7 +56,7 @@ abstract class Optimizer(sessionCatalog: SessionCatalog)
         PushPredicateThroughJoin,
         PushDownPredicate,
         LimitPushDown,
-        ColumnPruning,
+        ColumnPruning,  // 列裁剪的优化
         InferFiltersFromConstraints,
         // Operator combine
         CollapseRepartition,

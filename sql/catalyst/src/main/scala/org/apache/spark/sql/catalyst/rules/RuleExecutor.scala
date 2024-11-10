@@ -55,7 +55,7 @@ abstract class RuleExecutor[TreeType <: TreeNode[_]] extends Logging {
   protected case class Batch(name: String, strategy: Strategy, rules: Rule[TreeType]*)
 
   /** Defines a sequence of rule batches, to be overridden by the implementation. */
-  protected def batches: Seq[Batch]
+  protected def batches: Seq[Batch]   // 看 Analyzer 和 Optimizer 和SparkOptimizer 的 batches
 
   /**
    * Defines a check function that checks for structural integrity of the plan after the execution
@@ -73,7 +73,7 @@ abstract class RuleExecutor[TreeType <: TreeNode[_]] extends Logging {
     var curPlan = plan
     val queryExecutionMetrics = RuleExecutor.queryExecutionMeter
 
-    batches.foreach { batch =>
+    batches.foreach { batch =>         // batches 去看的 Analyzer 的 batches
       val batchStartPlan = curPlan
       var iteration = 1
       var lastPlan = curPlan
@@ -81,10 +81,10 @@ abstract class RuleExecutor[TreeType <: TreeNode[_]] extends Logging {
 
       // Run until fix point (or the max number of iterations as specified in the strategy.
       while (continue) {
-        curPlan = batch.rules.foldLeft(curPlan) { // 用规则处理, 处理 curPlan. 看 Analyzer 类(是一个子类)的 batches 变量
+        curPlan = batch.rules.foldLeft(curPlan) { // 用规则处理, 处理 curPlan. 看 Analyzer 类(是一个子类)的 batches 变量. foldLeft是 scala 的,他对于每一个 rule 拼上一个 plan, 形成(plan, rule)二元组, Optimizer 也有 batches
           case (plan, rule) =>
             val startTime = System.nanoTime()
-            val result = rule(plan)  // 规则匹配上了走这里
+            val result = rule(plan)  // 规则匹配上了走这里. 规则比如 Optimizer 中的ColumnPruning, 一定有一个 apply 方法
             val runTime = System.nanoTime() - startTime
 
             if (!result.fastEquals(plan)) {

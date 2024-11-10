@@ -68,16 +68,16 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
   lazy val sparkPlan: SparkPlan = {
     SparkSession.setActiveSession(sparkSession)
     // TODO: We use next(), i.e. take the first plan returned by the planner, here for now,
-    //       but we will implement to choose the best plan.
+    //       but we will implement to choose the best plan. 也就是多个优化规则只返回第一条
     planner.plan(ReturnAnswer(optimizedPlan)).next() // 转化成物理执行计划
   }
 
   // executedPlan should not be used to initialize any SparkPlan. It should be
   // only used for execution.
-  lazy val executedPlan: SparkPlan = prepareForExecution(sparkPlan)  // 可执行的物理执行计划
+  lazy val executedPlan: SparkPlan = prepareForExecution(sparkPlan)  // 可执行的物理执行计划, 逆着往上看 sparkPlan, 再往上看optimizedPlan -> withCachedData -> analyzed
 
   /** Internal version of the RDD. Avoids copies and has no schema */
-  lazy val toRdd: RDD[InternalRow] = executedPlan.execute()  // 得到 RDD 了, 回归到 spark core
+  lazy val toRdd: RDD[InternalRow] = executedPlan.execute()  // 得到 RDD 了, 回归到 spark core 因为调用了子类(例如FilterExec和ProjectExec)的 doExecute()
 
   /**
    * Prepares a planned [[SparkPlan]] for execution by inserting shuffle operations and internal

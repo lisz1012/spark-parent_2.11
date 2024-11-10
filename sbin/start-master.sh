@@ -24,7 +24,7 @@ if [ -z "${SPARK_HOME}" ]; then
 fi
 
 # NOTE: This exact class name is matched downstream by SparkSubmit.
-# Any changes need to be reflected there.
+# Any changes need to be reflected there. 从这里看出: Master 入口类是org.apache.spark.deploy.master.Master
 CLASS="org.apache.spark.deploy.master.Master"
 
 if [[ "$@" = *--help ]] || [[ "$@" = *-h ]]; then

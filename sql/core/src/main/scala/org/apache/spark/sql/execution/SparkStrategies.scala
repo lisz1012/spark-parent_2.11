@@ -448,7 +448,7 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
 
   // Can we automate these 'pass through' operations?
   object BasicOperators extends Strategy {
-    def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
+    def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {  // 看和 filter 相关的: 513 行
       case d: DataWritingCommand => DataWritingCommandExec(d, planLater(d.query)) :: Nil
       case r: RunnableCommand => ExecutedCommandExec(r) :: Nil
 
@@ -510,7 +510,7 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
         execution.SortExec(sortExprs, global, planLater(child)) :: Nil
       case logical.Project(projectList, child) =>
         execution.ProjectExec(projectList, planLater(child)) :: Nil
-      case logical.Filter(condition, child) =>
+      case logical.Filter(condition, child) =>   // child 是子查询, ()里面的那个语句
         execution.FilterExec(condition, planLater(child)) :: Nil
       case f: logical.TypedFilter =>
         execution.FilterExec(f.typedCondition(f.deserializer), planLater(f.child)) :: Nil // 最内层、第一个被执行的叫做child，子查询。以逻辑plan做衔接
