@@ -110,7 +110,7 @@ public class TransportRequestHandler extends MessageHandler<RequestMessage> {
     } else if (request instanceof RpcRequest) {
       processRpcRequest((RpcRequest) request);
     } else if (request instanceof OneWayMessage) {
-      processOneWayMessage((OneWayMessage) request);
+      processOneWayMessage((OneWayMessage) request);  // 随便看一个都行, 看processOneWayMessage好了, 看其中的 receive 方法
     } else if (request instanceof StreamRequest) {
       processStreamRequest((StreamRequest) request);
     } else {
@@ -204,7 +204,7 @@ public class TransportRequestHandler extends MessageHandler<RequestMessage> {
 
   private void processOneWayMessage(OneWayMessage req) {
     try {
-      rpcHandler.receive(reverseClient, req.body().nioByteBuffer());
+      rpcHandler.receive(reverseClient, req.body().nioByteBuffer());  // 看 NettyPrcHandler 的
     } catch (Exception e) {
       logger.error("Error while invoking RpcHandler#receive() for one-way message.", e);
     } finally {

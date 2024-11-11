@@ -2272,7 +2272,7 @@ private[spark] object Utils extends Logging {
         userPort(startPort, offset)
       }
       try {
-        val (service, port) = startService(tryPort)
+        val (service, port) = startService(tryPort)  // 把预先定义的函数startNettyRpcEnv调起了
         logInfo(s"Successfully started service$serviceString on port $port.")
         return (service, port)
       } catch {

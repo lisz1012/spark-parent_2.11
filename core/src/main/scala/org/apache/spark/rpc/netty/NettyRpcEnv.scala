@@ -460,13 +460,13 @@ private[rpc] class NettyRpcEnvFactory extends RpcEnvFactory with Logging {
     val nettyEnv =
       new NettyRpcEnv(sparkConf, javaSerializerInstance, config.advertiseAddress,
         config.securityManager, config.numUsableCores)
-    if (!config.clientMode) {
+    if (!config.clientMode) {  // 下面的startNettyRpcEnv在定义的时候并没有 start
       val startNettyRpcEnv: Int => (NettyRpcEnv, Int) = { actualPort =>
         nettyEnv.startServer(config.bindAddress, actualPort)
         (nettyEnv, nettyEnv.address.port)
       }
       try {
-        Utils.startServiceOnPort(config.port, startNettyRpcEnv, sparkConf, config.name)._1
+        Utils.startServiceOnPort(config.port, startNettyRpcEnv, sparkConf, config.name)._1   // 在这里面会真正执行startNettyRpcEnv
       } catch {
         case NonFatal(e) =>
           nettyEnv.shutdown()
@@ -652,7 +652,7 @@ private[netty] class NettyRpcHandler(
       client: TransportClient,
       message: ByteBuffer): Unit = {
     val messageToDispatch = internalReceive(client, message)
-    dispatcher.postOneWayMessage(messageToDispatch)
+    dispatcher.postOneWayMessage(messageToDispatch)   // 最终调到了分发器的 postOneWayMessage 方法
   }
 
   private def internalReceive(client: TransportClient, message: ByteBuffer): RequestMessage = {

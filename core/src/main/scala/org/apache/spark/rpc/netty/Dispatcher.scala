@@ -42,7 +42,7 @@ private[netty] class Dispatcher(nettyEnv: NettyRpcEnv, numUsableCores: Int) exte
       val name: String,
       val endpoint: RpcEndpoint,
       val ref: NettyRpcEndpointRef) {
-    val inbox = new Inbox(ref, endpoint)
+    val inbox = new Inbox(ref, endpoint)  // 这个构造方法里面放入了一个 OnStart 消息
   }
 
   private val endpoints: ConcurrentMap[String, EndpointData] =
@@ -61,13 +61,13 @@ private[netty] class Dispatcher(nettyEnv: NettyRpcEnv, numUsableCores: Int) exte
       private var stopped = false
 
       def registerRpcEndpoint(name: String, endpoint: RpcEndpoint): NettyRpcEndpointRef = {
-        val addr = RpcEndpointAddress(nettyEnv.address, name)
+        val addr = RpcEndpointAddress(nettyEnv.address, name)  // 这里这个 addr 解耦一下可以引入一个注册发现中心, 由于距自己 spark 访问, 不用做的太通用
         val endpointRef = new NettyRpcEndpointRef(nettyEnv.conf, addr, nettyEnv)
         synchronized {
           if (stopped) {
             throw new IllegalStateException("RpcEnv has been stopped")
           }
-          if (endpoints.putIfAbsent(name, new EndpointData(name, endpoint, endpointRef)) != null) {
+          if (endpoints.putIfAbsent(name, new EndpointData(name, endpoint, endpointRef)) != null) { // 这个构造方法里面放入了一个 OnStart 消息
             throw new IllegalArgumentException(s"There is already an RpcEndpoint called $name")
           }
       val data = endpoints.get(name)
@@ -160,7 +160,7 @@ private[netty] class Dispatcher(nettyEnv: NettyRpcEnv, numUsableCores: Int) exte
         Some(new SparkException(s"Could not find $endpointName."))
       } else {
         data.inbox.post(message)
-        receivers.offer(data)
+        receivers.offer(data)   // 最终把要发送出去的消息放到了receivers队列中
         None
       }
     }
@@ -194,14 +194,14 @@ private[netty] class Dispatcher(nettyEnv: NettyRpcEnv, numUsableCores: Int) exte
   }
 
   /** Thread pool used for dispatching messages. */
-  private val threadpool: ThreadPoolExecutor = {
+  private val threadpool: ThreadPoolExecutor = { // Thread 可以想象成是一个容器, 没有业务逻辑, 把 Runnable 对象压到线程栈里面去执行, 压的是方法帧, run 方法关注他是不是死循环
     val availableCores =
       if (numUsableCores > 0) numUsableCores else Runtime.getRuntime.availableProcessors()
     val numThreads = nettyEnv.conf.getInt("spark.rpc.netty.dispatcher.numThreads",
       math.max(2, availableCores))
     val pool = ThreadUtils.newDaemonFixedThreadPool(numThreads, "dispatcher-event-loop")
     for (i <- 0 until numThreads) {
-      pool.execute(new MessageLoop)
+      pool.execute(new MessageLoop)  // Loop 里面有个死循环, 一直在等待消息
     }
     pool
   }
@@ -212,13 +212,13 @@ private[netty] class Dispatcher(nettyEnv: NettyRpcEnv, numUsableCores: Int) exte
       try {
         while (true) {
           try {
-            val data = receivers.take()
+            val data = receivers.take()  // 阻塞式取出发来的消息. 消息可以由上面的 postMessage 方法放到了 receivers 队列中: receivers.offer(data)
             if (data == PoisonPill) {
               // Put PoisonPill back so that other MessageLoops can see it.
               receivers.offer(PoisonPill)
               return
             }
-            data.inbox.process(Dispatcher.this)
+            data.inbox.process(Dispatcher.this)  // 处理分发
           } catch {
             case NonFatal(e) => logError(e.getMessage, e)
           }

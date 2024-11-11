@@ -125,7 +125,7 @@ private[deploy] class Master(
   private var restServer: Option[StandaloneRestServer] = None
   private var restServerBoundPort: Option[Int] = None
 
-  override def onStart(): Unit = {
+  override def onStart(): Unit = {  // 真正运行起来了 Master, 这个 onStart 是被异步调起的, 其内容并不重要
     logInfo("Starting Spark master at " + masterUrl)
     logInfo(s"Running Spark version ${org.apache.spark.SPARK_VERSION}")
     webUi = new MasterWebUI(this, webUiPort)
@@ -1047,7 +1047,7 @@ private[deploy] object Master extends Logging {
     Utils.initDaemon(log)
     val conf = new SparkConf
     val args = new MasterArguments(argStrings, conf)
-    val (rpcEnv, _, _) = startRpcEnvAndEndpoint(args.host, args.port, args.webUiPort, conf)
+    val (rpcEnv, _, _) = startRpcEnvAndEndpoint(args.host, args.port, args.webUiPort, conf) // 启动 Master 的时候就把 RpcEnv 启动起来
     rpcEnv.awaitTermination()
   }
 
@@ -1063,9 +1063,9 @@ private[deploy] object Master extends Logging {
       webUiPort: Int,
       conf: SparkConf): (RpcEnv, Int, Option[Int]) = {
     val securityMgr = new SecurityManager(conf)
-    val rpcEnv = RpcEnv.create(SYSTEM_NAME, host, port, conf, securityMgr)
-    val masterEndpoint = rpcEnv.setupEndpoint(ENDPOINT_NAME,
-      new Master(rpcEnv, rpcEnv.address, webUiPort, securityMgr, conf))
+    val rpcEnv = RpcEnv.create(SYSTEM_NAME, host, port, conf, securityMgr)   // 看这个 create里面, 看看 RpcEnv 是个啥
+    val masterEndpoint = rpcEnv.setupEndpoint(ENDPOINT_NAME,                 // 把 Master 对象注册到了 RPC 环境里
+      new Master(rpcEnv, rpcEnv.address, webUiPort, securityMgr, conf))      // Master 将来会被异步的执行起来
     val portsResponse = masterEndpoint.askSync[BoundPortsResponse](BoundPortsRequest)
     (rpcEnv, portsResponse.webUIPort, portsResponse.restPort)
   }

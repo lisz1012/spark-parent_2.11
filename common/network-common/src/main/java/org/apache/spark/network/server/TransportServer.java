@@ -87,16 +87,16 @@ public class TransportServer implements Closeable {
   private void init(String hostToBind, int portToBind) {
 
     IOMode ioMode = IOMode.valueOf(conf.ioMode());
-    EventLoopGroup bossGroup =
-      NettyUtils.createEventLoop(ioMode, conf.serverThreads(), conf.getModuleName() + "-server");
+    EventLoopGroup bossGroup =     // Netty 相关的类
+      NettyUtils.createEventLoop(ioMode, conf.serverThreads(), conf.getModuleName() + "-server");  // Loop 说明里面有个死循环
     EventLoopGroup workerGroup = bossGroup;
 
     PooledByteBufAllocator allocator = NettyUtils.createPooledByteBufAllocator(
       conf.preferDirectBufs(), true /* allowCache */, conf.serverThreads());
 
     bootstrap = new ServerBootstrap()
-      .group(bossGroup, workerGroup)
-      .channel(NettyUtils.getServerChannelClass(ioMode))
+      .group(bossGroup, workerGroup)   // 先接受, 产生的读写事件由 workerGroup 处理
+      .channel(NettyUtils.getServerChannelClass(ioMode))  // channel 既可读又可写, 和文描一样, 返璞归真了
       .option(ChannelOption.ALLOCATOR, allocator)
       .childOption(ChannelOption.ALLOCATOR, allocator);
 
@@ -122,7 +122,7 @@ public class TransportServer implements Closeable {
         for (TransportServerBootstrap bootstrap : bootstraps) {
           rpcHandler = bootstrap.doBootstrap(ch, rpcHandler);
         }
-        context.initializePipeline(ch, rpcHandler);
+        context.initializePipeline(ch, rpcHandler);  //看这个
       }
     });
 

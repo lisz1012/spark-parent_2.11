@@ -90,7 +90,7 @@ private[netty] class Inbox(
       if (!enableConcurrent && numActiveThreads != 0) {
         return
       }
-      message = messages.poll()
+      message = messages.poll()  // 把 messages 里面的消息取出来, 下面各种 match
       if (message != null) {
         numActiveThreads += 1
       } else {
@@ -119,7 +119,7 @@ private[netty] class Inbox(
             })
 
           case OnStart =>
-            endpoint.onStart()
+            endpoint.onStart()  // 调用 RpcEndpoint.onStart() 方法,  其中Master 也是一种 RpcEndpoint
             if (!endpoint.isInstanceOf[ThreadSafeRpcEndpoint]) {
               inbox.synchronized {
                 if (!stopped) {

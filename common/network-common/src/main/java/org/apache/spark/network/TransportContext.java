@@ -169,7 +169,7 @@ public class TransportContext {
     TransportClient client = new TransportClient(channel, responseHandler);
     TransportRequestHandler requestHandler = new TransportRequestHandler(channel, client,
       rpcHandler, conf.maxChunksBeingTransferred());
-    return new TransportChannelHandler(client, responseHandler, requestHandler,
+    return new TransportChannelHandler(client, responseHandler, requestHandler,   // 看这个, 点进去
       conf.connectionTimeoutMs(), closeIdleConnections);
   }
 
